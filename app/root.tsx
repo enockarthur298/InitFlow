@@ -14,7 +14,13 @@ import reactToastifyStyles from 'react-toastify/dist/ReactToastify.css?url';
 import globalStyles from './styles/index.scss?url';
 import xtermStyles from '@xterm/xterm/css/xterm.css?url';
 
+// Import rootAuthLoader
+import { rootAuthLoader } from "@clerk/remix/ssr.server";
 import 'virtual:uno.css';
+
+// Import ClerkApp
+import { ClerkApp } from "@clerk/remix";
+
 
 export const links: LinksFunction = () => [
   {
@@ -54,6 +60,9 @@ const inlineThemeCode = stripIndents`
     document.querySelector('html')?.setAttribute('data-theme', theme);
   }
 `;
+// Export as the root route loader
+export const loader: LoaderFunction = (args) => rootAuthLoader(args);
+
 
 export const Head = createHead(() => (
   <>
@@ -83,7 +92,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 import { logStore } from './lib/stores/logs';
 
-export default function App() {
+export function App() {
   const theme = useStore(themeStore);
 
   useEffect(() => {
@@ -101,3 +110,6 @@ export default function App() {
     </Layout>
   );
 }
+
+// Wrap your app with ClerkApp
+export default ClerkApp(App);

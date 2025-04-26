@@ -4,6 +4,15 @@ import { BaseChat } from '~/components/chat/BaseChat';
 import { Chat } from '~/components/chat/Chat.client';
 import { Header } from '~/components/header/Header';
 // Removed BackgroundRays importz
+import {
+  SignInButton,
+  SignOutButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from "@clerk/remix";
+
 
 export const meta: MetaFunction = () => {
   return [{ title: 'InitFlow' }, { name: 'description', content: 'Build Full-Stack apps in minute' }];

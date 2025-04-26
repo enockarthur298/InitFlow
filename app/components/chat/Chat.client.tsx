@@ -27,6 +27,9 @@ import { logStore } from '~/lib/stores/logs';
 import { streamingState } from '~/lib/stores/streaming';
 import { filesToArtifacts } from '~/utils/fileUtils';
 import { supabaseConnection } from '~/lib/stores/supabase';
+import * as RadixDialog from '@radix-ui/react-dialog';
+import { useAuth } from '@clerk/remix';
+import { SignInButton, SignUpButton } from '@clerk/remix';
 
 const toastAnimation = cssTransition({
   enter: 'animated fadeInRight',
@@ -113,9 +116,18 @@ interface ChatProps {
   description?: string;
 }
 
+// Inside the ChatImpl component (or wherever useChat is called)
 export const ChatImpl = memo(
-  ({ description, initialMessages, storeMessageHistory, importChat, exportChat }: ChatProps) => {
-    useShortcuts();
+  ({
+    description,
+    initialMessages,
+    exportChat,
+    storeMessageHistory,
+    importChat,
+  }) => {
+    renderLogger.trace('ChatImpl');
+    const { isSignedIn } = useAuth(); // Get authentication status
+    const [showAuthDialog, setShowAuthDialog] = useState(false); // State for dialog
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
@@ -299,6 +311,11 @@ export const ChatImpl = memo(
     };
 
     const sendMessage = async (_event: React.UIEvent, messageInput?: string) => {
+      // --- FIX: Check authentication before proceeding ---
+      if (!isSignedIn) {
+        setShowAuthDialog(true);
+        return;
+      }
       const messageContent = messageInput || input;
 
       if (!messageContent?.trim()) {
@@ -504,68 +521,193 @@ export const ChatImpl = memo(
     };
 
     return (
-      <BaseChat
-        ref={animationScope}
-        textareaRef={textareaRef}
-        input={input}
-        showChat={showChat}
-        chatStarted={chatStarted}
-        isStreaming={isLoading || fakeLoading}
-        onStreamingChange={(streaming) => {
-          streamingState.set(streaming);
-        }}
-        enhancingPrompt={enhancingPrompt}
-        promptEnhanced={promptEnhanced}
-        sendMessage={sendMessage}
-        model={model}
-        setModel={handleModelChange}
-        provider={provider}
-        setProvider={handleProviderChange}
-        providerList={activeProviders}
-        messageRef={messageRef}
-        scrollRef={scrollRef}
-        handleInputChange={(e) => {
-          onTextareaChange(e);
-          debouncedCachePrompt(e);
-        }}
-        handleStop={abort}
-        description={description}
-        importChat={importChat}
-        exportChat={exportChat}
-        messages={messages.map((message, i) => {
-          if (message.role === 'user') {
-            return message;
-          }
+      <>
+        <BaseChat
+          ref={animationScope}
+          textareaRef={textareaRef}
+          input={input}
+          showChat={showChat}
+          chatStarted={chatStarted}
+          isStreaming={isLoading || fakeLoading}
+          onStreamingChange={(streaming) => {
+            streamingState.set(streaming);
+          }}
+          enhancingPrompt={enhancingPrompt}
+          promptEnhanced={promptEnhanced}
+          sendMessage={sendMessage}
+          model={model}
+          setModel={handleModelChange}
+          provider={provider}
+          setProvider={handleProviderChange}
+          providerList={activeProviders}
+          messageRef={messageRef}
+          scrollRef={scrollRef}
+          handleInputChange={(e) => {
+            onTextareaChange(e);
+            debouncedCachePrompt(e);
+          }}
+          handleStop={abort}
+          description={description}
+          importChat={importChat}
+          exportChat={exportChat}
+          messages={messages.map((message, i) => {
+            if (message.role === 'user') {
+              return message;
+            }
 
-          return {
-            ...message,
-            content: parsedMessages[i] || '',
-          };
-        })}
-        enhancePrompt={() => {
-          enhancePrompt(
-            input,
-            (input) => {
-              setInput(input);
-              scrollTextArea();
-            },
-            model,
-            provider,
-            apiKeys,
-          );
-        }}
-        uploadedFiles={uploadedFiles}
-        setUploadedFiles={setUploadedFiles}
-        imageDataList={imageDataList}
-        setImageDataList={setImageDataList}
-        actionAlert={actionAlert}
-        clearAlert={() => workbenchStore.clearAlert()}
-        supabaseAlert={supabaseAlert}
-        clearSupabaseAlert={() => workbenchStore.clearSupabaseAlert()}
-        deployAlert={deployAlert}
-        clearDeployAlert={() => workbenchStore.clearDeployAlert()}
-        data={chatData}
-      />
+            return {
+              ...message,
+              content: parsedMessages[i] || '',
+            };
+          })}
+          enhancePrompt={() => {
+            enhancePrompt(
+              input,
+              (input) => {
+                setInput(input);
+                scrollTextArea();
+              },
+              model,
+              provider,
+              apiKeys,
+            );
+          }}
+          uploadedFiles={uploadedFiles}
+          setUploadedFiles={setUploadedFiles}
+          imageDataList={imageDataList}
+          setImageDataList={setImageDataList}
+          actionAlert={actionAlert}
+          clearAlert={() => workbenchStore.clearAlert()}
+          supabaseAlert={supabaseAlert}
+          clearSupabaseAlert={() => workbenchStore.clearSupabaseAlert()}
+          deployAlert={deployAlert}
+          clearDeployAlert={() => workbenchStore.clearDeployAlert()}
+          data={chatData}
+        />
+
+        {/* Authentication Required Dialog */}
+        <RadixDialog.Root open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+          <RadixDialog.Portal>
+            <RadixDialog.Overlay className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 transition-all duration-200" />
+            <RadixDialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-md bg-gradient-to-b from-bolt-elements-background to-bolt-elements-background/95 rounded-xl border border-bolt-elements-borderColor shadow-2xl z-50">
+              <div className="relative p-6">
+                {/* Header */}
+                <div className="text-center mb-8">
+                  <div className="mx-auto w-12 h-12 mb-4 rounded-full bg-bolt-primary-button/10 flex items-center justify-center">
+                    <div className="i-ph:lock-key text-2xl text-bolt-primary-button" />
+                  </div>
+                  <RadixDialog.Title className="text-xl font-semibold text-bolt-elements-textPrimary mb-2">
+                    Authentication Required
+                  </RadixDialog.Title>
+                  <RadixDialog.Description className="text-sm text-bolt-elements-textSecondary">
+                    Sign in or create an account to continue your conversation
+                  </RadixDialog.Description>
+                </div>
+
+                {/* Buttons */}
+                <div className="space-y-3">
+                  <SignInButton mode="modal">
+                    <button
+                      className="w-full px-4 py-3 rounded-lg bg-bolt-primary-button text-bolt-primary-button-foreground hover:bg-bolt-primary-button/90 transition-colors duration-200 flex items-center justify-center gap-2 font-medium"
+                      onClick={() => setShowAuthDialog(false)}
+                    >
+                      <div className="i-ph:sign-in text-xl" />
+                      Sign In to Your Account
+                    </button>
+                  </SignInButton>
+                  
+                  <SignUpButton mode="modal">
+                    <button
+                      className="w-full px-4 py-3 rounded-lg border border-bolt-elements-borderColor bg-transparent hover:bg-bolt-elements-background-hover text-bolt-elements-textPrimary transition-colors duration-200 flex items-center justify-center gap-2 font-medium"
+                      onClick={() => setShowAuthDialog(false)}
+                    >
+                      <div className="i-ph:user-plus text-xl" />
+                      Create New Account
+                    </button>
+                  </SignUpButton>
+                </div>
+
+                {/* Close button */}
+                <RadixDialog.Close asChild>
+                  <button
+                    className="absolute top-4 right-4 p-2 rounded-full text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary hover:bg-bolt-elements-background-hover transition-colors duration-200"
+                    aria-label="Close"
+                  >
+                    <div className="i-ph:x text-xl" />
+                  </button>
+                </RadixDialog.Close>
+              </div>
+            </RadixDialog.Content>
+          </RadixDialog.Portal>
+        </RadixDialog.Root>
+      </>
     );
   },
 );
+
+// Create a new handleSubmit that wraps the original one
+const handleSubmit = (
+  e: React.FormEvent<HTMLFormElement>,
+  chatRequestOptions?: {
+    options?: {
+      body: Record<string, any>;
+    };
+    data?: Record<string, string>;
+  },
+) => {
+  e.preventDefault(); // Prevent default form submission
+  if (!isSignedIn) {
+    setShowAuthDialog(true); // Show dialog if not signed in
+    return;
+  }
+  // If signed in, call the original handleSubmit from useChat
+  originalHandleSubmit(e, chatRequestOptions);
+  // Clear files after successful submission (if needed)
+  setUploadedFiles([]);
+  setImageDataList([]);
+};
+
+// Modify the sendMessage function (used by BaseChat's SendButton)
+const sendMessage = (event: React.UIEvent, messageInput?: string) => {
+  if (!isSignedIn) {
+    setShowAuthDialog(true); // Show dialog if not signed in
+    return;
+  }
+
+  // Manually construct the message object if messageInput is provided
+  const messageToSend = messageInput ?? input;
+  if (!messageToSend.trim() && uploadedFiles.length === 0 && imageDataList.length === 0) {
+     toast.error('Please enter a message or upload an image.');
+     return;
+  }
+
+  const newMessage: Message = {
+    id: generateId(),
+    role: 'user',
+    content: messageToSend,
+    data: {
+      artifacts: filesToArtifacts(uploadedFiles, imageDataList),
+    },
+  };
+
+  // Use append to send the message
+  append(newMessage, {
+     data: {
+       provider: provider?.name || DEFAULT_PROVIDER.name,
+       model: model || DEFAULT_MODEL,
+       promptId: promptId,
+       context: JSON.stringify(contextAnnotations),
+       supabase_connection: JSON.stringify(supabaseConnection.get()),
+     },
+  });
+
+
+  // Clear input and files after sending
+  setInput('');
+  setUploadedFiles([]);
+  setImageDataList([]);
+  // ... potentially other cleanup ...
+};
+
+
+
