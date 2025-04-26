@@ -195,7 +195,7 @@ export const Menu = () => {
 
       // Navigate if needed
       if (shouldNavigate) {
-        console.log('Navigating away from deleted chat');
+        
         window.location.pathname = '/';
       }
     },
@@ -218,7 +218,7 @@ export const Menu = () => {
   const toggleItemSelection = useCallback((id: string) => {
     setSelectedItems((prev) => {
       const newSelectedItems = prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id];
-      console.log('Selected items updated:', newSelectedItems);
+      
 
       return newSelectedItems; // Return the new array
     });

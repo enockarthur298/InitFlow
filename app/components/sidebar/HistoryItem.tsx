@@ -40,7 +40,7 @@ export function HistoryItem({
       if (selectionMode) {
         e.preventDefault();
         e.stopPropagation();
-        console.log('Item clicked in selection mode:', item.id);
+        
         onToggleSelection?.(item.id);
       }
     },
@@ -48,7 +48,7 @@ export function HistoryItem({
   );
 
   const handleCheckboxChange = useCallback(() => {
-    console.log('Checkbox changed for item:', item.id);
+    
     onToggleSelection?.(item.id);
   }, [item.id, onToggleSelection]);
 

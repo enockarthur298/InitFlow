@@ -186,7 +186,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
           parsedApiKeys = getApiKeysFromCookies();
           setApiKeys(parsedApiKeys);
         } catch (error) {
-          console.error('Error loading API keys from cookies:', error);
+          
           Cookies.remove('apiKeys');
         }
 
@@ -549,7 +549,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         minHeight: TEXTAREA_MIN_HEIGHT,
                         maxHeight: TEXTAREA_MAX_HEIGHT,
                       }}
-                      placeholder="How can Bolt help you today?"
+                      placeholder="What website do you want to build?"
                       translate="no"
                     />
                     <ClientOnly>
@@ -577,12 +577,12 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                           <div className="i-ph:paperclip text-xl"></div>
                         </IconButton>
                         <IconButton
-                          title="Enhance prompt"
+                          title="Improve prompt"
                           disabled={input.length === 0 || enhancingPrompt}
                           className={classNames('transition-all', enhancingPrompt ? 'opacity-100' : '')}
                           onClick={() => {
                             enhancePrompt?.();
-                            toast.success('Prompt enhanced!');
+                            toast.success('Prompt improved!');
                           }}
                         >
                           {enhancingPrompt ? (
@@ -592,12 +592,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                           )}
                         </IconButton>
 
-                        <SpeechRecognitionButton
-                          isListening={isListening}
-                          onStart={startListening}
-                          onStop={stopListening}
-                          disabled={isStreaming}
-                        />
+                        
                         {chatStarted && <ClientOnly>{() => <ExportChatButton exportChat={exportChat} />}</ClientOnly>}
                         <IconButton
                           title="Model Settings"
