@@ -31,11 +31,13 @@ export function Header() {
         )}
       </div>
 
+      <div className="flex-1" />
+
       {/* Conditional rendering for action buttons only */}
       {chat.started && (
         <ClientOnly>
           {() => (
-            <div className="ml-auto mr-1">
+            <div className="mr-1">
               <HeaderActionButtons />
             </div>
           )}

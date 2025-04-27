@@ -41,15 +41,16 @@ const viewTransition = { ease: cubicEasingFn };
 const sliderOptions: SliderOptions<WorkbenchViewType> = {
   left: {
     value: 'code',
-    text: 'Code',
+    text: 'Code Editor',
   },
-  middle: {
-    value: 'diff',
-    text: 'Diff',
-  },
+
+  //middle: {
+    //value: 'diff',
+    //text: 'Diff',
+  //},
   right: {
     value: 'preview',
-    text: 'Preview',
+    text: 'App Demo',
   },
 };
 
@@ -284,8 +285,6 @@ export const Workbench = memo(
     const [isPushDialogOpen, setIsPushDialogOpen] = useState(false);
     const [fileHistory, setFileHistory] = useState<Record<string, FileHistory>>({});
 
-    // const modifiedFiles = Array.from(useStore(workbenchStore.unsavedFiles).keys());
-
     const hasPreview = useStore(computed(workbenchStore.previews, (previews) => previews.length > 0));
     const showWorkbench = useStore(workbenchStore.showWorkbench);
     const selectedFile = useStore(workbenchStore.selectedFile);
@@ -300,6 +299,12 @@ export const Workbench = memo(
       workbenchStore.currentView.set(view);
     };
 
+    // Set initial view to preview when component mounts
+    useEffect(() => {
+      setSelectedView('preview');
+    }, []);
+
+    // Keep the preview view when preview is available
     useEffect(() => {
       if (hasPreview) {
         setSelectedView('preview');
@@ -362,38 +367,26 @@ export const Workbench = memo(
         >
           <div
             className={classNames(
-              'fixed top-[calc(var(--header-height)+1.5rem)] bottom-6 w-[var(--workbench-inner-width)] mr-4 z-0 transition-[left,width] duration-200 bolt-ease-cubic-bezier',
+              'fixed top-[var(--header-height)] bottom-0 w-[var(--workbench-inner-width)] z-0 transition-[left,width] duration-200 bolt-ease-cubic-bezier',
               {
                 'w-full': isSmallViewport,
                 'left-0': showWorkbench && isSmallViewport,
-                'left-[var(--workbench-left)]': showWorkbench,
+                'left-[calc(var(--workbench-left)-1rem)]': showWorkbench, // Adjusted left position
                 'left-[100%]': !showWorkbench,
               },
             )}
           >
-            <div className="absolute inset-0 px-2 lg:px-6">
-              <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor shadow-sm rounded-lg overflow-hidden">
+            <div className="absolute inset-0 px-2 lg:px-4"> {/* Adjusted padding */}
+              <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor shadow-sm rounded-b-lg overflow-hidden"> {/* Removed top border radius */}
                 <div className="flex items-center px-3 py-2 border-b border-bolt-elements-borderColor gap-1">
                   <Slider selected={selectedView} options={sliderOptions} setSelected={setSelectedView} />
                   <div className="ml-auto" />
                   {selectedView === 'code' && (
                     <div className="flex overflow-y-auto">
-                      {/* 
-                      // Toggle Terminal button removed from UI but preserved for future use
-                      <PanelHeaderButton
-                        className="mr-1 text-sm"
-                        onClick={() => {
-                          workbenchStore.toggleTerminal(!workbenchStore.showTerminal.get());
-                        }}
-                      >
-                        <div className="i-ph:terminal" />
-                        Open Terminal
-                      </PanelHeaderButton>
-                      */}
                       <DropdownMenu.Root>
                         <DropdownMenu.Trigger className="text-sm flex items-center gap-1 text-bolt-elements-item-contentDefault bg-transparent enabled:hover:text-bolt-elements-item-contentActive rounded-md p-1 enabled:hover:bg-bolt-elements-item-backgroundActive disabled:cursor-not-allowed">
-                          <div className="i-ph:box-arrow-up" />
-                          Sync & Export
+                          <div className="i-ph:gear-six" />
+                          Actions
                         </DropdownMenu.Trigger>
                         <DropdownMenu.Content
                           className={classNames(
@@ -416,10 +409,11 @@ export const Workbench = memo(
                             }}
                           >
                             <div className="flex items-center gap-2">
-                              <div className="i-ph:download-simple"></div>
-                              <span>Download Code</span>
+                              <div className="i-ph:file-zip"></div>
+                              <span>Download Your Project</span>
                             </div>
                           </DropdownMenu.Item>
+                          {/* Sync Files feature temporarily hidden from UI
                           <DropdownMenu.Item
                             className={classNames(
                               'cursor-pointer flex items-center w-full px-4 py-2 text-sm text-bolt-elements-textPrimary hover:bg-bolt-elements-item-backgroundActive gap-2 rounded-md group relative',
@@ -428,10 +422,11 @@ export const Workbench = memo(
                             disabled={isSyncing}
                           >
                             <div className="flex items-center gap-2">
-                              {isSyncing ? <div className="i-ph:spinner" /> : <div className="i-ph:cloud-arrow-down" />}
+                              {isSyncing ? <div className="i-ph:spinner" /> : <div className="i-ph:folder-simple-arrow-down" />}
                               <span>{isSyncing ? 'Syncing...' : 'Sync Files'}</span>
                             </div>
                           </DropdownMenu.Item>
+                          */}
                           <DropdownMenu.Item
                             className={classNames(
                               'cursor-pointer flex items-center w-full px-4 py-2 text-sm text-bolt-elements-textPrimary hover:bg-bolt-elements-item-backgroundActive gap-2 rounded-md group relative',
@@ -439,8 +434,8 @@ export const Workbench = memo(
                             onClick={() => setIsPushDialogOpen(true)}
                           >
                             <div className="flex items-center gap-2">
-                              <div className="i-ph:git-branch" />
-                              Push to GitHub
+                              <div className="i-ph:github-logo" />
+                              Upload to GitHub
                             </div>
                           </DropdownMenu.Item>
                         </DropdownMenu.Content>
