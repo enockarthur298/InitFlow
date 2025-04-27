@@ -15,7 +15,7 @@ import { workbenchStore } from '~/lib/stores/workbench';
 import { DEFAULT_MODEL, DEFAULT_PROVIDER, PROMPT_COOKIE_KEY, PROVIDER_LIST } from '~/utils/constants';
 import { cubicEasingFn } from '~/utils/easings';
 import { createScopedLogger, renderLogger } from '~/utils/logger';
-import { BaseChat } from './BaseChat';
+import { BaseChat } from './basechat';
 import Cookies from 'js-cookie';
 import { debounce } from '~/utils/debounce';
 import { useSettings } from '~/lib/hooks/useSettings';
@@ -588,8 +588,8 @@ export const ChatImpl = memo(
         {/* Authentication Required Dialog */}
         <RadixDialog.Root open={showAuthDialog} onOpenChange={setShowAuthDialog}>
           <RadixDialog.Portal>
-            <RadixDialog.Overlay className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 transition-all duration-200" />
-            <RadixDialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-md bg-gradient-to-b from-bolt-elements-background to-bolt-elements-background/95 rounded-xl border border-bolt-elements-borderColor shadow-2xl z-50">
+            <RadixDialog.Overlay className="fixed inset-0 bg-[#1A1D2D]/30 backdrop-blur-sm z-50 transition-all duration-200" />
+            <RadixDialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-md bg-gradient-to-b from-[#F5F7FA] to-[#E4E7EB] dark:from-[#1A1D2D] dark:to-[#141625] rounded-xl border border-[#7B61FF]/20 shadow-2xl shadow-[#7B61FF]/5 z-50">
               <div className="relative p-6">
                 {/* Header */}
                 <div className="text-center mb-8">
@@ -708,6 +708,5 @@ const sendMessage = (event: React.UIEvent, messageInput?: string) => {
   setImageDataList([]);
   // ... potentially other cleanup ...
 };
-
 
 

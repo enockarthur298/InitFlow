@@ -28,7 +28,8 @@ import { SpeechRecognitionButton } from '~/components/chat/SpeechRecognition';
 import type { ProviderInfo } from '~/types/model';
 import { ScreenshotStateManager } from './ScreenshotStateManager';
 import { toast } from 'react-toastify';
-import StarterTemplates from './StarterTemplates';
+// Remove this line
+// import StarterTemplates from './StarterTemplates';
 import type { ActionAlert, SupabaseAlert, DeployAlert } from '~/types/actions';
 import DeployChatAlert from '~/components/deploy/DeployAlert';
 import ChatAlert from './ChatAlert';
@@ -328,7 +329,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
           <div className={classNames(styles.Chat, 'flex flex-col flex-grow lg:min-w-[var(--chat-min-width)] h-full')}>
             {!chatStarted && (
               <div id="intro" className="mt-[16vh] max-w-chat mx-auto text-center px-4 lg:px-0">
-                <h1 className="text-3xl lg:text-6xl font-bold text-bolt-elements-textPrimary mb-4 animate-fade-in">
+                <h1 className="text-3xl lg:text-6xl font-bold mb-4 animate-fade-in bg-gradient-to-r from-[#7B61FF] to-[#1A73E8] bg-clip-text text-transparent">
                   InitFlow
                 </h1>
                 <p className="text-md lg:text-xl mb-8 text-bolt-elements-textSecondary animate-fade-in animation-delay-200">
@@ -479,15 +480,18 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                   </ClientOnly>
                   <div
                     className={classNames(
-                      'relative shadow-xs border border-bolt-elements-borderColor backdrop-blur rounded-lg',
+                      'relative shadow-lg border border-bolt-elements-borderColor backdrop-blur-md rounded-xl overflow-hidden',
+                      'bg-gradient-to-b from-bolt-elements-background-depth-2/50 to-bolt-elements-background-depth-2/80',
                     )}
                   >
                     <textarea
                       ref={textareaRef}
                       className={classNames(
-                        'w-full pl-4 pt-4 pr-16 outline-none resize-none text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent text-sm',
-                        'transition-all duration-200',
-                        'hover:border-bolt-elements-focus',
+                        'w-full pl-5 pt-5 pr-16 outline-none resize-none',
+                        'text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary/60',
+                        'bg-transparent text-sm backdrop-blur-sm',
+                        'transition-all duration-300',
+                        'focus:ring-2 focus:ring-purple-500/20',
                       )}
                       onDragEnter={(e) => {
                         e.preventDefault();
@@ -571,11 +575,16 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         />
                       )}
                     </ClientOnly>
-                    <div className="flex justify-between items-center text-sm p-4 pt-2">
-                      <div className="flex gap-1 items-center">
-                        <IconButton title="Upload file" className="transition-all" onClick={() => handleFileUpload()}>
-                          <div className="i-ph:paperclip text-xl"></div>
+                    <div className="flex justify-between items-center text-sm p-4 pt-2 bg-bolt-elements-background-depth-1/30 backdrop-blur-sm">
+                      <div className="flex gap-2 items-center">
+                        <IconButton 
+                          title="Upload file" 
+                          className="transition-all hover:bg-purple-500/10 active:scale-95" 
+                          onClick={() => handleFileUpload()}
+                        >
+                          <div className="i-ph:upload text-xl"></div>
                         </IconButton>
+                        {/* Commented out enhance prompt button - keep for future use
                         <IconButton
                           title="Improve prompt"
                           disabled={input.length === 0 || enhancingPrompt}
@@ -591,7 +600,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                             <div className="i-bolt:stars text-xl"></div>
                           )}
                         </IconButton>
-
+                        */}
                         
                         {chatStarted && <ClientOnly>{() => <ExportChatButton exportChat={exportChat} />}</ClientOnly>}
                         <IconButton
@@ -622,7 +631,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 </div>
               </div>
             </div>
-            <div className="flex flex-col justify-center gap-5">
+            <div className="flex flex-col justify-center gap-5 pb-16">
               {!chatStarted && (
                 <div className="flex justify-center gap-2">
                   {ImportButtons(importChat)}
@@ -638,7 +647,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
 
                   handleSendMessage?.(event, messageInput);
                 })}
-              {!chatStarted && <StarterTemplates />}
             </div>
           </div>
           <ClientOnly>

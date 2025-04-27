@@ -1,18 +1,23 @@
 import React from 'react';
 
 const EXAMPLE_PROMPTS = [
-  { text: 'Build a todo app in React using Tailwind' },
-  { text: 'Build a simple blog using Astro' },
-  { text: 'Create a cookie consent form using Material UI' },
-  { text: 'Make a space invaders game' },
-  { text: 'Make a Tic Tac Toe game in html, css and js only' },
+  { text: 'Build a real estate listings site with interactive maps' },
+  { text: 'Design a modern personal portfolio website' },
+  { text: 'Develop a social media dashboard with engagement metrics' },
+  { text: 'Create an e-commerce product page with image gallery' },
+  
 ];
 
 export function ExamplePrompts(sendMessage?: { (event: React.UIEvent, messageInput?: string): void | undefined }) {
   return (
-    <div id="examples" className="relative flex flex-col gap-9 w-full max-w-3xl mx-auto flex justify-center mt-6">
+    <div id="examples" className="relative flex flex-col gap-6 w-full max-w-3xl mx-auto mt-8">
+      <div className="text-center mb-4">
+        <h3 className="text-sm font-medium text-bolt-elements-textSecondary uppercase tracking-wider">
+          Quick Start Templates
+        </h3>
+      </div>
       <div
-        className="flex flex-wrap justify-center gap-2"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 px-4"
         style={{
           animation: '.25s ease-out 0s 1 _fade-and-move-in_g2ptj_1 forwards',
         }}
@@ -24,9 +29,19 @@ export function ExamplePrompts(sendMessage?: { (event: React.UIEvent, messageInp
               onClick={(event) => {
                 sendMessage?.(event, examplePrompt.text);
               }}
-              className="border border-bolt-elements-borderColor rounded-full bg-gray-50 hover:bg-gray-100 dark:bg-gray-950 dark:hover:bg-gray-900 text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary px-3 py-1 text-xs transition-theme"
+              className={`
+                group relative overflow-hidden rounded-lg border border-bolt-elements-borderColor/30
+                bg-bolt-elements-background-depth-2 hover:bg-bolt-elements-background-depth-3
+                px-4 py-3 text-sm transition-all duration-300
+                hover:shadow-[0_4px_12px_rgba(123,97,255,0.15)]
+                hover:border-[#7B61FF]/50
+                hover:scale-[1.02]
+              `}
             >
-              {examplePrompt.text}
+              <div className="absolute inset-0 bg-gradient-to-r from-[#7B61FF]/5 to-[#1A73E8]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <span className="relative z-10 text-bolt-elements-textSecondary group-hover:text-bolt-elements-textPrimary transition-colors duration-200">
+                {examplePrompt.text}
+              </span>
             </button>
           );
         })}

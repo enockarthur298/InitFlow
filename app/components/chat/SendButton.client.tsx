@@ -15,22 +15,41 @@ export const SendButton = ({ show, isStreaming, disabled, onClick }: SendButtonP
     <AnimatePresence>
       {show ? (
         <motion.button
-          className="absolute flex justify-center items-center top-[18px] right-[22px] p-1 bg-accent-500 hover:brightness-94 color-white rounded-md w-[34px] h-[34px] transition-theme disabled:opacity-50 disabled:cursor-not-allowed"
-          transition={{ ease: customEasingFn, duration: 0.17 }}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 10 }}
+          className={`
+            absolute flex justify-center items-center top-[18px] right-[22px]
+            p-1.5 rounded-xl w-[38px] h-[38px] transition-all duration-200
+            bg-gradient-to-r from-[#7B61FF] to-[#1A73E8]
+            hover:shadow-lg hover:shadow-purple-500/20 hover:scale-105
+            active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
+            disabled:hover:scale-100 disabled:hover:shadow-none
+            text-white backdrop-blur-sm
+          `}
+          transition={{ 
+            ease: customEasingFn, 
+            duration: 0.2,
+            scale: {
+              type: "spring",
+              stiffness: 400,
+              damping: 17
+            }
+          }}
+          initial={{ opacity: 0, y: 10, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 10, scale: 0.9 }}
           disabled={disabled}
           onClick={(event) => {
             event.preventDefault();
-
             if (!disabled) {
               onClick?.(event);
             }
           }}
         >
           <div className="text-lg">
-            {!isStreaming ? <div className="i-ph:arrow-right"></div> : <div className="i-ph:stop-circle-bold"></div>}
+            {!isStreaming ? (
+              <div className="i-ph:arrow-right text-xl transform transition-transform group-hover:translate-x-0.5"></div>
+            ) : (
+              <div className="i-ph:stop-circle-bold text-xl"></div>
+            )}
           </div>
         </motion.button>
       ) : null}

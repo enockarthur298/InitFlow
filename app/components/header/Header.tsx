@@ -19,9 +19,9 @@ export function Header() {
     >
       <div className="flex items-center gap-2 z-logo text-bolt-elements-textPrimary cursor-pointer">
         <div className="i-ph:sidebar-simple-duotone text-xl" />
+        {/* Logo placeholder - removed existing logo */}
         <a href="/" className="text-2xl font-semibold text-accent flex items-center">
-          <img src="/logo-light-styled.png" alt="logo" className="w-[90px] inline-block dark:hidden" />
-          <img src="/logo-dark-styled.png" alt="logo" className="w-[90px] inline-block hidden dark:block" />
+          {/* Your logo will go here */}
         </a>
       </div>
 
@@ -41,20 +41,39 @@ export function Header() {
         </>
       )}
 
-      {/* Authentication Buttons - Placed towards the right */}
+      {/* Authentication section */}
       <div className={classNames("ml-auto flex items-center gap-4", {
-          "pl-4": chat.started // Add some padding if chat elements are present
+        "pl-4": chat.started
       })}>
         <SignedOut>
-          <SignInButton mode="modal">
-            {/* You might want to style this button to match your theme */}
-            <button className="px-3 py-1.5 rounded text-sm bg-bolt-primary-button text-bolt-primary-button-foreground hover:bg-bolt-primary-button/90">Sign In</button>
-          </SignInButton>
-          <SignUpButton mode="modal">
-             {/* You might want to style this button to match your theme */}
-            <button className="px-3 py-1.5 rounded text-sm border border-bolt-elements-borderColor text-bolt-elements-textPrimary hover:bg-bolt-elements-background-hover">Sign Up</button>
-          </SignUpButton>
+          <div className="flex items-center gap-4">
+            <SignInButton mode="modal">
+              <button
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#7B61FF] to-[#1A73E8] 
+                  text-white font-medium hover:opacity-90 transition-all duration-200 
+                  flex items-center justify-center gap-2 shadow-[0_4px_20px_-4px_rgba(123,97,255,0.3)]
+                  hover:shadow-[0_4px_20px_-4px_rgba(123,97,255,0.5)]"
+              >
+                <div className="i-ph:sign-in text-lg" />
+                Sign In
+              </button>
+            </SignInButton>
+            
+            <SignUpButton mode="modal">
+              <button
+                className="px-4 py-2 rounded-xl border-2 border-[#7B61FF]/20 
+                  bg-white/50 dark:bg-[#1A1D2D]/50 hover:bg-[#7B61FF]/5 
+                  text-[#1A1D2D] dark:text-white font-medium transition-all duration-200 
+                  flex items-center justify-center gap-2
+                  hover:border-[#7B61FF]/40 hover:shadow-[0_4px_20px_-4px_rgba(123,97,255,0.2)]"
+              >
+                <div className="i-ph:user-plus text-lg" />
+                Sign Up
+              </button>
+            </SignUpButton>
+          </div>
         </SignedOut>
+        
         <SignedIn>
           <UserButton afterSignOutUrl="/" />
         </SignedIn>
