@@ -9,14 +9,13 @@ export class TerminalStore {
   #terminals: Array<{ terminal: ITerminal; process: WebContainerProcess }> = [];
   #boltTerminal = newBoltShellProcess();
 
-  showTerminal: WritableAtom<boolean> = import.meta.hot?.data.showTerminal ?? atom(true);
+  // Always start closed, even after hot-reload
+  showTerminal: WritableAtom<boolean> = atom(false);
 
   constructor(webcontainerPromise: Promise<WebContainer>) {
     this.#webcontainer = webcontainerPromise;
 
-    if (import.meta.hot) {
-      import.meta.hot.data.showTerminal = this.showTerminal;
-    }
+    // Do not persist showTerminal in hot-reload data
   }
   get boltTerminal() {
     return this.#boltTerminal;
