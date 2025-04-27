@@ -54,9 +54,11 @@ const sliderOptions: SliderOptions<WorkbenchViewType> = {
   },
 };
 
+// Update the workbench variants for full-width support
 const workbenchVariants = {
   closed: {
     width: 0,
+    opacity: 0,
     transition: {
       duration: 0.2,
       ease: cubicEasingFn,
@@ -64,6 +66,7 @@ const workbenchVariants = {
   },
   open: {
     width: 'var(--workbench-width)',
+    opacity: 1,
     transition: {
       duration: 0.2,
       ease: cubicEasingFn,
@@ -359,6 +362,7 @@ export const Workbench = memo(
 
     return (
       chatStarted && (
+        // Update the main workbench container
         <motion.div
           initial="closed"
           animate={showWorkbench ? 'open' : 'closed'}
@@ -367,17 +371,17 @@ export const Workbench = memo(
         >
           <div
             className={classNames(
-              'fixed top-[var(--header-height)] bottom-0 w-[var(--workbench-inner-width)] z-0 transition-[left,width] duration-200 bolt-ease-cubic-bezier',
+              'fixed top-[var(--header-height)] bottom-[5px] right-[5px] w-[var(--workbench-inner-width)] z-0 transition-[left,width] duration-200 bolt-ease-cubic-bezier',
               {
                 'w-full': isSmallViewport,
                 'left-0': showWorkbench && isSmallViewport,
-                'left-[calc(var(--workbench-left)-1rem)]': showWorkbench, // Adjusted left position
+                'left-[var(--workbench-left)]': showWorkbench,
                 'left-[100%]': !showWorkbench,
               },
             )}
           >
-            <div className="absolute inset-0 px-2 lg:px-4"> {/* Adjusted padding */}
-              <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor shadow-sm rounded-b-lg overflow-hidden"> {/* Removed top border radius */}
+            <div className="absolute inset-0">
+              <div className="h-full flex flex-col bg-bolt-elements-background-depth-2 border-y border-bolt-elements-borderColor shadow-lg overflow-hidden rounded-b-lg">
                 <div className="flex items-center px-3 py-2 border-b border-bolt-elements-borderColor gap-1">
                   <Slider selected={selectedView} options={sliderOptions} setSelected={setSelectedView} />
                   <div className="ml-auto" />
@@ -446,14 +450,7 @@ export const Workbench = memo(
                   {selectedView === 'diff' && (
                     <FileModifiedDropdown fileHistory={fileHistory} onSelectFile={handleSelectFile} />
                   )}
-                  <IconButton
-                    icon="i-ph:x-circle"
-                    className="-mr-1"
-                    size="xl"
-                    onClick={() => {
-                      workbenchStore.showWorkbench.set(false);
-                    }}
-                  />
+                  {/* Remove the close icon button */}
                 </div>
                 <div className="relative flex-1 overflow-hidden">
                   <View initial={{ x: '0%' }} animate={{ x: selectedView === 'code' ? '0%' : '-100%' }}>

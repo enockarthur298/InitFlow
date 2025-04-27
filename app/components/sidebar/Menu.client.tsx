@@ -41,27 +41,7 @@ type DialogContent =
   | { type: 'bulkDelete'; items: ChatHistoryItem[] }
   | null;
 
-function CurrentDateTime() {
-  const [dateTime, setDateTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setDateTime(new Date());
-    }, 60000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <div className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800/50">
-      <div className="h-4 w-4 i-ph:clock opacity-80" />
-      <div className="flex gap-2">
-        <span>{dateTime.toLocaleDateString()}</span>
-        <span>{dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-      </div>
-    </div>
-  );
-}
+// Remove CurrentDateTime component since it's no longer needed
 
 export const Menu = () => {
   const { duplicateCurrentChat, exportChat } = useChatHistory();
@@ -338,27 +318,25 @@ export const Menu = () => {
         )}
       >
         <div className="h-12 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-900/50">
-          <div className="text-gray-900 dark:text-white font-medium"></div>
+          <div className="text-gray-900 dark:text-white font-medium">
+            <span className="i-lucide:layout-dashboard h-5 w-5 text-purple-500 hover:text-purple-600 transition-colors" />
+          </div>
           <div className="flex items-center gap-3">
-            <span className="font-medium text-sm text-gray-900 dark:text-white truncate">
-              {profile?.username || 'Guest User'}
-            </span>
-            <div className="flex items-center justify-center w-[32px] h-[32px] overflow-hidden bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-500 rounded-full shrink-0">
-              {profile?.avatar ? (
-                <img
-                  src={profile.avatar}
-                  alt={profile?.username || 'User'}
-                  className="w-full h-full object-cover"
-                  loading="eager"
-                  decoding="sync"
-                />
-              ) : (
-                <div className="i-ph:user-fill text-lg" />
-              )}
-            </div>
+            {profile?.avatar ? (
+              <img
+                src={profile.avatar}
+                alt={profile?.username}
+                className="w-8 h-8 rounded-full object-cover ring-2 ring-purple-500/20"
+                loading="eager"
+                decoding="sync"
+              />
+            ) : (
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-500/10 text-purple-500">
+                <div className="i-ph:user-circle-duotone text-xl" />
+              </div>
+            )}
           </div>
         </div>
-        <CurrentDateTime />
         <div className="flex-1 flex flex-col h-full w-full overflow-hidden">
           <div className="p-4 space-y-3">
             <div className="flex gap-2">
@@ -366,7 +344,7 @@ export const Menu = () => {
                 href="/"
                 className="flex-1 flex gap-2 items-center bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-500/20 rounded-lg px-4 py-2 transition-colors"
               >
-                <span className="inline-block i-ph:plus-circle h-4 w-4" />
+                <span className="inline-block i-ph:plus-circle-duotone h-4 w-4" />
                 <span className="text-sm font-medium">New Project</span>
               </a>
               <button
@@ -379,7 +357,7 @@ export const Menu = () => {
                 )}
                 aria-label={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
               >
-                <span className={selectionMode ? 'i-ph:x h-4 w-4' : 'i-ph:check-square h-4 w-4'} />
+                <span className={selectionMode ? 'i-ph:x-circle-duotone h-4 w-4' : 'i-ph:check-square-duotone h-4 w-4'} />
               </button>
             </div>
             <div className="relative w-full">

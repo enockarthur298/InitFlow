@@ -633,10 +633,19 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
             </div>
             <div className="flex flex-col justify-center gap-5 pb-16">
               {!chatStarted && (
-                <div className="flex justify-center gap-2">
-                  {ImportButtons(importChat)}
-                  <GitCloneButton importChat={importChat} />
-                </div>
+                <>
+                  <div className="flex items-center justify-center gap-4 w-full my-2">
+                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-800 to-transparent"></div>
+                    <span className="text-base font-medium text-gray-500 dark:text-gray-400 px-6 py-1 rounded-full bg-gray-50/50 dark:bg-gray-900/50">
+                    Or import an existing project.
+                    </span>
+                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-gray-200 dark:via-gray-800 to-transparent"></div>
+                  </div>
+                  <div className="flex justify-center gap-2">
+                    {ImportButtons(importChat)}
+                    <GitCloneButton importChat={importChat} />
+                  </div>
+                </>
               )}
               {!chatStarted &&
                 ExamplePrompts((event, messageInput) => {
