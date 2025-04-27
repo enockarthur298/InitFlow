@@ -17,32 +17,33 @@ export function Header() {
         'border-bolt-elements-borderColor': chat.started,
       })}
     >
-      <div className="flex items-center gap-2 z-logo text-bolt-elements-textPrimary cursor-pointer">
+      <div className="flex items-center gap-2 z-logo text-bolt-elements-textPrimary">
         <div className="i-ph:sidebar-simple-duotone text-xl" />
         {/* Logo placeholder - removed existing logo */}
         <a href="/" className="text-2xl font-semibold text-accent flex items-center">
           {/* Your logo will go here */}
         </a>
-      </div>
-
-      {/* Conditional rendering for chat description and action buttons */}
-      {chat.started && (
-        <>
-          <span className="flex-1 px-4 truncate text-center text-bolt-elements-textPrimary">
+        {/* Moved chat description here */}
+        {chat.started && (
+          <span className="ml-4 text-bolt-elements-textPrimary">
             <ClientOnly>{() => <ChatDescription />}</ClientOnly>
           </span>
-          <ClientOnly>
-            {() => (
-              <div className="mr-1">
-                <HeaderActionButtons />
-              </div>
-            )}
-          </ClientOnly>
-        </>
+        )}
+      </div>
+
+      {/* Conditional rendering for action buttons only */}
+      {chat.started && (
+        <ClientOnly>
+          {() => (
+            <div className="ml-auto mr-1">
+              <HeaderActionButtons />
+            </div>
+          )}
+        </ClientOnly>
       )}
 
       {/* Authentication section */}
-      <div className={classNames("ml-auto flex items-center gap-4", {
+      <div className={classNames("flex items-center gap-4", {
         "pl-4": chat.started
       })}>
         <SignedOut>

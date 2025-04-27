@@ -378,6 +378,8 @@ export const Workbench = memo(
                   <div className="ml-auto" />
                   {selectedView === 'code' && (
                     <div className="flex overflow-y-auto">
+                      {/* 
+                      // Toggle Terminal button removed from UI but preserved for future use
                       <PanelHeaderButton
                         className="mr-1 text-sm"
                         onClick={() => {
@@ -387,6 +389,7 @@ export const Workbench = memo(
                         <div className="i-ph:terminal" />
                         Open Terminal
                       </PanelHeaderButton>
+                      */}
                       <DropdownMenu.Root>
                         <DropdownMenu.Trigger className="text-sm flex items-center gap-1 text-bolt-elements-item-contentDefault bg-transparent enabled:hover:text-bolt-elements-item-contentActive rounded-md p-1 enabled:hover:bg-bolt-elements-item-backgroundActive disabled:cursor-not-allowed">
                           <div className="i-ph:box-arrow-up" />
