@@ -3,16 +3,21 @@ import type { Message } from 'ai';
 import { toast } from 'react-toastify';
 import { MAX_FILES, isBinaryFile, shouldIncludeFile } from '~/utils/fileUtils';
 import { createChatFromFolder } from '~/utils/folderImport';
-import { logStore } from '~/lib/stores/logs'; // Assuming logStore is imported from this location
+import { logStore } from '~/lib/stores/logs';
 import { Button } from '~/components/ui/Button';
 import { classNames } from '~/utils/classNames';
 
 interface ImportFolderButtonProps {
   className?: string;
+  id?: string;
   importChat?: (description: string, messages: Message[]) => Promise<void>;
 }
 
-export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ className, importChat }) => {
+export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ 
+  className, 
+  id = 'folder-import', 
+  importChat 
+}) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,7 +112,7 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
     <>
       <input
         type="file"
-        id="folder-import"
+        id={id}
         className="hidden"
         webkitdirectory=""
         directory=""
@@ -116,25 +121,21 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
       />
       <Button
         onClick={() => {
-          const input = document.getElementById('folder-import');
+          const input = document.getElementById(id);
           input?.click();
         }}
         title="Import Folder"
         variant="outline"
         size="lg"
-        className={classNames(
-          'gap-2 bg-bolt-elements-background-depth-1',
-          'text-bolt-elements-textPrimary',
-          'hover:bg-bolt-elements-background-depth-2',
-          'border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)]',
-          'h-10 px-4 py-2 min-w-[120px] justify-center',
-          'transition-all duration-200 ease-in-out',
-          className,
-        )}
+        className={className}
         disabled={isLoading}
       >
-        <span className="i-ph:upload-simple w-4 h-4" />
-        {isLoading ? 'Importing...' : 'Import Folder'}
+        {isLoading ? (
+          <span className="i-ph:spinner animate-spin w-4 h-4 mr-2" />
+        ) : (
+          <span className="i-ph:folder-open w-4 h-4 mr-2" />
+        )}
+        Import Folder
       </Button>
     </>
   );

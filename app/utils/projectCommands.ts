@@ -2,6 +2,7 @@ import type { Message } from 'ai';
 import { generateId } from './fileUtils';
 
 export interface ProjectCommands {
+  length: number;
   type: string;
   setupCommand?: string;
   startCommand?: string;
