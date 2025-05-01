@@ -3,12 +3,12 @@ import { useGit } from '~/lib/hooks/useGit';
 import type { Message } from 'ai';
 import { detectProjectCommands, createCommandsMessage, escapeBoltTags } from '~/utils/projectCommands';
 import { generateId } from '~/utils/fileUtils';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { toast } from 'react-toastify';
 import { LoadingOverlay } from '~/components/ui/LoadingOverlay';
 import { RepositorySelectionDialog } from '~/components/@settings/tabs/connections/components/RepositorySelectionDialog';
 import { classNames } from '~/utils/classNames';
-import { Button } from '~/components/ui/Button';
+// import { Button } from '~/components/ui/Button';
 import type { IChatMetadata } from '~/lib/persistence/db';
 
 const IGNORE_PATTERNS = [
@@ -38,32 +38,15 @@ const MAX_TOTAL_SIZE = 500 * 1024; // 500KB total limit
 
 interface GitCloneButtonProps {
   className?: string;
-  id?: string;
-  isOpen?: boolean;
-  onOpenChange?: (isOpen: boolean) => void;
   importChat?: (description: string, messages: Message[], metadata?: IChatMetadata) => Promise<void>;
 }
 
-export default function GitCloneButton({ 
-  importChat, 
-  className, 
-  id = 'git-clone-button',
-  isOpen = false,
-  onOpenChange
-}: GitCloneButtonProps) {
+// Component commented out but functionality preserved for future use
+/*
+export default function GitCloneButton({ importChat, className }: GitCloneButtonProps) {
   const { ready, gitClone } = useGit();
   const [loading, setLoading] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(isOpen);
-
-  useEffect(() => {
-    setIsDialogOpen(isOpen);
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (onOpenChange) {
-      onOpenChange(isDialogOpen);
-    }
-  }, [isDialogOpen, onOpenChange]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleClone = async (repoUrl: string) => {
     if (!ready) {
@@ -107,93 +90,102 @@ export default function GitCloneButton({
             const fileSize = new TextEncoder().encode(textContent).length;
 
             if (fileSize > MAX_FILE_SIZE) {
-              skippedFiles.push(filePath);
+              skippedFiles.push(`${filePath} (too large: ${Math.round(fileSize / 1024)}KB)`);
+              continue;
+            }
+
+            // Check total size
+            if (totalSize + fileSize > MAX_TOTAL_SIZE) {
+              skippedFiles.push(`${filePath} (would exceed total size limit)`);
               continue;
             }
 
             totalSize += fileSize;
-
-            if (totalSize > MAX_TOTAL_SIZE) {
-              skippedFiles.push(filePath);
-              continue;
-            }
-
             fileContents.push({
               path: filePath,
               content: textContent,
             });
-          } catch (error) {
-            console.error(`Error processing file ${filePath}:`, error);
-            skippedFiles.push(filePath);
+          } catch (e: any) {
+            skippedFiles.push(`${filePath} (error: ${e.message})`);
           }
         }
 
-        // Detect project commands
         const commands = await detectProjectCommands(fileContents);
+        const commandsMessage = createCommandsMessage(commands);
 
-        // Create messages
-        const messages: Message[] = [
-          {
-            id: generateId(),
-            role: 'user',
-            content: `I've cloned the repository from ${repoUrl}. Here are the files:\n\n${fileContents
-              .map((file) => `**${file.path}**\n\`\`\`\n${escapeBoltTags(file.content)}\n\`\`\`\n`)
-              .join('\n')}`,
-          },
-        ];
+        const filesMessage: Message = {
+          role: 'assistant',
+          content: `Cloning the repo ${repoUrl} into ${workdir}
+${
+  skippedFiles.length > 0
+    ? `\nSkipped files (${skippedFiles.length}):
+${skippedFiles.map((f) => `- ${f}`).join('\n')}`
+    : ''
+}
 
-        // Add commands message if available
-        if (commands.length > 0) {
-          const commandMessage = createCommandsMessage(commands);
-          if (commandMessage) { // Ensure commandMessage is not null
-            messages.push(commandMessage);
-          }
-        }
-
-        // Extract repo name from URL
-        const repoName = repoUrl.split('/').pop()?.replace('.git', '') || 'Git Repository';
-
-        // Create metadata with correct type structure
-        const metadata: IChatMetadata = {
-          type: 'git', // Changed from 'source' to 'type'
-          repository: {
-            url: repoUrl,
-            name: repoName,
-            fileCount: fileContents.length,
-            skippedCount: skippedFiles.length,
-          }
+<boltArtifact id="imported-files" title="Git Cloned Files" type="bundled">
+${fileContents
+  .map(
+    (file) =>
+      `<boltAction type="file" filePath="${file.path}">
+${escapeBoltTags(file.content)}
+</boltAction>`,
+  )
+  .join('\n')}
+</boltArtifact>`,
+          id: generateId(),
+          createdAt: new Date(),
         };
 
-        await importChat(repoName, messages, metadata);
+        const messages = [filesMessage];
 
-        if (skippedFiles.length > 0) {
-          toast.info(
-            `Imported ${fileContents.length} files. Skipped ${skippedFiles.length} files due to size or format limitations.`,
-          );
-        } else {
-          toast.success(`Successfully imported ${fileContents.length} files from ${repoName}`);
+        if (commandsMessage) {
+          messages.push(commandsMessage);
         }
+
+        await importChat(`Git Project:${repoUrl.split('/').slice(-1)[0]}`, messages);
       }
     } catch (error) {
-      console.error('Failed to clone repository:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to clone repository');
+      console.error('Error during import:', error);
+      toast.error('Failed to import repository');
     } finally {
       setLoading(false);
-      setIsDialogOpen(false);
     }
   };
 
-  // Return only the dialog and loading overlay
-  // The button is removed as it's now replaced by the card-based UI
   return (
     <>
-      <RepositorySelectionDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        onSelect={handleClone}
-      />
+      <Button
+        onClick={() => setIsDialogOpen(true)}
+        title="Clone a Git Repo"
+        variant="outline"
+        size="lg"
+        className={classNames(
+          'gap-2 bg-bolt-elements-background-depth-1',
+          'text-bolt-elements-textPrimary',
+          'hover:bg-bolt-elements-background-depth-2',
+          'border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)]',
+          'h-10 px-4 py-2 min-w-[120px] justify-center',
+          'transition-all duration-200 ease-in-out',
+          className,
+        )}
+        disabled={!ready || loading}
+      >
+        <span className="i-ph:git-branch w-4 h-4" />
+        Clone a Git Repo
+      </Button>
 
-      {loading && <LoadingOverlay message="Cloning repository..." />}
+      <RepositorySelectionDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} onSelect={handleClone} />
+
+      {loading && <LoadingOverlay message="Please wait while we clone the repository..." />}
     </>
   );
 }
+
+
+Export a component that accepts props but returns null
+export default function GitCloneButton(props: GitCloneButtonProps): JSX.Element {
+  return null;
+}
+
+*/

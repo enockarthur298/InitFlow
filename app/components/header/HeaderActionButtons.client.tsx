@@ -11,6 +11,7 @@ import { NetlifyDeploymentLink } from '~/components/chat/NetlifyDeploymentLink.c
 import { VercelDeploymentLink } from '~/components/chat/VercelDeploymentLink.client';
 import { useVercelDeploy } from '~/components/deploy/VercelDeploy.client';
 import { useNetlifyDeploy } from '~/components/deploy/NetlifyDeploy.client';
+import { SupabaseConnection } from '~/components/chat/SupabaseConnection';
 
 interface HeaderActionButtonsProps {}
 
@@ -67,17 +68,40 @@ export function HeaderActionButtons({}: HeaderActionButtonsProps) {
     }
   };
 
+  const [isConnectionsOpen, setIsConnectionsOpen] = useState(false);
+  const connectionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (connectionsRef.current && !connectionsRef.current.contains(event.target as Node)) {
+        setIsConnectionsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <div className="flex">
       <div className="relative" ref={dropdownRef}>
-        <div className="flex border border-bolt-elements-borderColor rounded-md overflow-hidden mr-2 text-sm">
+        <div className="flex border border-[#E4E9F2] dark:border-gray-700 rounded-md overflow-hidden mr-2 text-sm shadow-sm">
           <Button
             active
             disabled={isDeploying || !activePreview || isStreaming}
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="px-4 hover:bg-bolt-elements-item-backgroundActive flex items-center gap-2"
+            className="px-4 bg-[#3366FF] text-white flex items-center gap-2 font-medium transition-all duration-200"
           >
-            {isDeploying ? `Deploying to ${deployingTo}...` : 'Publish'}
+            {isDeploying ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin i-ph:circle-notch w-4 h-4" />
+                <span>{`Publishing to ${deployingTo}...`}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="i-ph:rocket-launch w-4 h-4" />
+                <span>Publish</span>
+              </div>
+            )}
             <div
               className={classNames('i-ph:caret-down w-4 h-4 transition-transform', isDropdownOpen ? 'rotate-180' : '')}
             />
@@ -85,15 +109,15 @@ export function HeaderActionButtons({}: HeaderActionButtonsProps) {
         </div>
 
         {isDropdownOpen && (
-          <div className="absolute right-2 flex flex-col gap-1 z-50 p-1 mt-1 min-w-[13.5rem] bg-bolt-elements-background-depth-2 rounded-md shadow-lg bg-bolt-elements-backgroundDefault border border-bolt-elements-borderColor">
+          <div className="absolute right-2 flex flex-col gap-1 z-50 p-1 mt-1 min-w-[13.5rem] bg-white dark:bg-gray-900 rounded-md shadow-lg border border-[#E4E9F2] dark:border-gray-700">
             <Button
-              active
+              active={false}
               onClick={() => {
                 onNetlifyDeploy();
                 setIsDropdownOpen(false);
               }}
               disabled={isDeploying || !activePreview || !netlifyConn.user}
-              className="flex items-center w-full px-4 py-2 text-sm text-bolt-elements-textPrimary hover:bg-bolt-elements-item-backgroundActive gap-2 rounded-md group relative"
+              className="flex items-center w-full px-4 py-2 text-sm text-[#2E3A59] dark:text-white bg-white dark:bg-gray-900 gap-2 rounded-md group relative transition-colors"
             >
               <img
                 className="w-5 h-5"
@@ -102,19 +126,19 @@ export function HeaderActionButtons({}: HeaderActionButtonsProps) {
                 crossOrigin="anonymous"
                 src="https://cdn.simpleicons.org/netlify"
               />
-              <span className="mx-auto">
+              <span className="mx-auto font-medium">
                 {!netlifyConn.user ? 'No Netlify Account Connected' : 'Publish to Netlify'}
               </span>
               {netlifyConn.user && <NetlifyDeploymentLink />}
             </Button>
             <Button
-              active
+              active={false}
               onClick={() => {
                 onVercelDeploy();
                 setIsDropdownOpen(false);
               }}
               disabled={isDeploying || !activePreview || !vercelConn.user}
-              className="flex items-center w-full px-4 py-2 text-sm text-bolt-elements-textPrimary hover:bg-bolt-elements-item-backgroundActive gap-2 rounded-md group relative"
+              className="flex items-center w-full px-4 py-2 text-sm text-[#2E3A59] dark:text-white hover:bg-[#EDF1FC] dark:hover:bg-[#3366FF]/10 gap-2 rounded-md group relative transition-colors"
             >
               <img
                 className="w-5 h-5 bg-black p-1 rounded"
@@ -124,17 +148,17 @@ export function HeaderActionButtons({}: HeaderActionButtonsProps) {
                 src="https://cdn.simpleicons.org/vercel/white"
                 alt="vercel"
               />
-              <span className="mx-auto">{!vercelConn.user ? 'No Vercel Account Connected' : 'Publish to Vercel'}</span>
+              <span className="mx-auto font-medium">{!vercelConn.user ? 'No Vercel Account Connected' : 'Publish to Vercel'}</span>
               {vercelConn.user && <VercelDeploymentLink />}
             </Button>
             <Button
               active={false}
               disabled
-              className="flex items-center w-full rounded-md px-4 py-2 text-sm text-bolt-elements-textTertiary gap-2"
+              className="flex items-center w-full rounded-md px-4 py-2 text-sm text-[#8F9BB3] dark:text-gray-500 gap-2"
             >
               <span className="sr-only">Coming Soon</span>
               <img
-                className="w-5 h-5"
+                className="w-5 h-5 opacity-70"
                 height="24"
                 width="24"
                 crossOrigin="anonymous"
@@ -146,31 +170,44 @@ export function HeaderActionButtons({}: HeaderActionButtonsProps) {
           </div>
         )}
       </div>
-      <div className="flex border border-bolt-elements-borderColor rounded-md overflow-hidden">
-        <Button
-          active={showChat}
-          disabled={!canHideChat || isSmallViewport} // expand button is disabled on mobile as it's not needed
-          onClick={() => {
-            if (canHideChat) {
-              chatStore.setKey('showChat', !showChat);
-            }
-          }}
-        >
-          <div className="i-bolt:chat text-sm" />
-        </Button>
-        <div className="w-[1px] bg-bolt-elements-borderColor" />
-        <Button
-          active={showWorkbench}
-          onClick={() => {
-            if (showWorkbench && !showChat) {
-              chatStore.setKey('showChat', true);
-            }
 
-            workbenchStore.showWorkbench.set(!showWorkbench);
-          }}
-        >
-          <div className="i-ph:code-bold" />
-        </Button>
+      {/* Connections button and dropdown */}
+      <div className="relative" ref={connectionsRef}>
+        <div className="flex border border-[#E4E9F2] dark:border-gray-700 rounded-md overflow-hidden mr-2 text-sm shadow-sm">
+          <Button
+            active
+            onClick={() => setIsConnectionsOpen(!isConnectionsOpen)}
+            className="px-4 bg-[#3366FF] text-white flex items-center gap-2 font-medium transition-all duration-200"
+          >
+            <div className="flex items-center gap-2">
+              <div className="i-ph:plugs-connected w-4 h-4" />
+              <span>Connections</span>
+            </div>
+            <div
+              className={classNames('i-ph:caret-down w-4 h-4 transition-transform', isConnectionsOpen ? 'rotate-180' : '')}
+            />
+          </Button>
+        </div>
+
+        {isConnectionsOpen && (
+          <div className="absolute right-2 flex flex-col gap-1 z-50 p-1 mt-1 min-w-[13.5rem] bg-white dark:bg-gray-900 rounded-md shadow-lg border border-[#E4E9F2] dark:border-gray-700">
+            <Button
+              active={false}
+              className="flex items-center w-full px-4 py-2 text-sm text-[#2E3A59] dark:text-white hover:bg-[#EDF1FC] dark:hover:bg-[#3366FF]/10 gap-2 rounded-md group relative transition-colors"
+            >
+              <img
+                className="w-5 h-5"
+                height="24"
+                width="24"
+                crossOrigin="anonymous"
+                src="https://cdn.simpleicons.org/supabase"
+                alt="supabase"
+              />
+              <span className="mx-auto font-medium">Supabase</span>
+              <SupabaseConnection />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -204,3 +241,4 @@ function Button({ active = false, disabled = false, children, onClick, className
     </button>
   );
 }
+

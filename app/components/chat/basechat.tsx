@@ -20,7 +20,7 @@ import styles from './BaseChat.module.scss';
 import { ExportChatButton } from '~/components/chat/chatExportAndImport/ExportChatButton';
 import { ImportButtons } from '~/components/chat/chatExportAndImport/ImportButtons';
 import { ExamplePrompts } from '~/components/chat/ExamplePrompts';
-import GitCloneButton from './GitCloneButton';
+//import GitCloneButton from './GitCloneButton';
 
 import FilePreview from './FilePreview';
 import { ModelSelector } from '~/components/chat/ModelSelector';
@@ -39,7 +39,7 @@ import type { ProgressAnnotation } from '~/types/context';
 import type { ActionRunner } from '~/lib/runtime/action-runner';
 import { LOCAL_PROVIDERS } from '~/lib/stores/settings';
 import { SupabaseChatAlert } from '~/components/chat/SupabaseAlert';
-import { SupabaseConnection } from './SupabaseConnection';
+//import { SupabaseConnection } from './SupabaseConnection';
 
 const TEXTAREA_MIN_HEIGHT = 76;
 
@@ -584,25 +584,8 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         >
                           <div className="i-ph:upload text-xl"></div>
                         </IconButton>
-                        {/* Commented out enhance prompt button - keep for future use
-                        <IconButton
-                          title="Improve prompt"
-                          disabled={input.length === 0 || enhancingPrompt}
-                          className={classNames('transition-all', enhancingPrompt ? 'opacity-100' : '')}
-                          onClick={() => {
-                            enhancePrompt?.();
-                            toast.success('Prompt improved!');
-                          }}
-                        >
-                          {enhancingPrompt ? (
-                            <div className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-xl animate-spin"></div>
-                          ) : (
-                            <div className="i-bolt:stars text-xl"></div>
-                          )}
-                        </IconButton>
-                        */}
                         
-                        {chatStarted && <ClientOnly>{() => <ExportChatButton exportChat={exportChat} />}</ClientOnly>}
+                        {chatStarted && <ClientOnly>{() => <ExportChatButton />}</ClientOnly>}
                         <IconButton
                           title="Model Settings"
                           className={classNames('transition-all flex items-center gap-1', {
@@ -625,38 +608,49 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                           a new line
                         </div>
                       ) : null}
-                      <SupabaseConnection />
+                      {/* SupabaseConnection removed from here */}
                     </div>
                   </div>
+                  
+                  {/* Example Prompts - Moved here from bottom of chat */}
+                  {!chatStarted && (
+                    <div className="mt-4">
+                      {ExamplePrompts((event: React.UIEvent, messageInput?: string) => {
+                        if (isStreaming) {
+                          handleStop?.();
+                          return;
+                        }
+                        handleSendMessage?.(event, messageInput);
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
+            
             <div className="flex flex-col justify-center gap-5 pb-16">
               {!chatStarted && (
                 <>
                   <div className="flex items-center justify-center gap-4 w-full my-2">
                     <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-800 to-transparent"></div>
                     <span className="text-base font-medium text-gray-500 dark:text-gray-400 px-6 py-1 rounded-full bg-gray-50/50 dark:bg-gray-900/50">
-                    Or import an existing project.
+                    
                     </span>
+                
                     <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-gray-200 dark:via-gray-800 to-transparent"></div>
                   </div>
                   <div className="flex justify-center gap-2">
-                    {ImportButtons(importChat)}
-                    <GitCloneButton importChat={importChat} />
+                    {/* Remove importChat prop from ImportButtons */}
+                    {ImportButtons()}
+                    {/* Remove importChat prop from GitCloneButton if present */}
+                    {/* <GitCloneButton /> */}
                   </div>
                 </>
               )}
-              {!chatStarted &&
-                ExamplePrompts((event, messageInput) => {
-                  if (isStreaming) {
-                    handleStop?.();
-                    return;
-                  }
-
-                  handleSendMessage?.(event, messageInput);
-                })}
+              {/* Removed ExamplePrompts from here as it's now placed above */}
             </div>
+
+            
           </div>
           <ClientOnly>
             {() => (

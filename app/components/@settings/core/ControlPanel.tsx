@@ -87,8 +87,8 @@ const TAB_DESCRIPTIONS: Record<TabType, string> = {
 const BETA_TABS = new Set<TabType>(['task-manager', 'service-status', 'update', 'local-providers']);
 
 const BetaLabel = () => (
-  <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-purple-500/10 dark:bg-purple-500/20">
-    <span className="text-[10px] font-medium text-purple-600 dark:text-purple-400">BETA</span>
+  <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-[#3366FF]/10 dark:bg-[#3366FF]/20">
+    <span className="text-[10px] font-medium text-[#3366FF] dark:text-[#3366FF]">BETA</span>
   </div>
 );
 
@@ -103,8 +103,8 @@ const AnimatedSwitch = ({ checked, onCheckedChange, id, label }: AnimatedSwitchP
           'relative inline-flex h-6 w-11 items-center rounded-full',
           'transition-all duration-300 ease-[cubic-bezier(0.87,_0,_0.13,_1)]',
           'bg-gray-200 dark:bg-gray-700',
-          'data-[state=checked]:bg-purple-500',
-          'focus:outline-none focus:ring-2 focus:ring-purple-500/20',
+          'data-[state=checked]:bg-[#3366FF]',
+          'focus:outline-none focus:ring-2 focus:ring-[#3366FF]/20',
           'cursor-pointer',
           'group',
         )}
@@ -433,40 +433,38 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
             <motion.div
               className={classNames(
                 'w-[1200px] h-[90vh]',
-                'bg-[#FAFAFA] dark:bg-[#0A0A0A]',
                 'rounded-2xl shadow-2xl',
-                'border border-[#E5E5E5] dark:border-[#1A1A1A]',
+                'border border-[#E4E9F2]',
                 'flex flex-col overflow-hidden',
                 'relative',
+                'bg-[#F7F9FC] dark:bg-[#222B45]' // Changed from transparent to InitFlow colors
               )}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2 }}
             >
-              <div className="absolute inset-0 overflow-hidden rounded-2xl">
-                <BackgroundRays />
-              </div>
+              {/* Remove the BackgroundRays component */}
               <div className="relative z-10 flex flex-col h-full">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-[#E4E9F2] dark:border-[#2E3A59] bg-white dark:bg-[#1A2138]">
                   <div className="flex items-center space-x-4">
                     {(activeTab || showTabManagement) && (
                       <button
                         onClick={handleBack}
-                        className="flex items-center justify-center w-8 h-8 rounded-full bg-transparent hover:bg-purple-500/10 dark:hover:bg-purple-500/20 group transition-all duration-200"
+                        className="flex items-center justify-center w-8 h-8 rounded-full bg-transparent hover:bg-[#3366FF]/10 dark:hover:bg-[#3366FF]/20 group transition-all duration-200"
                       >
-                        <div className="i-ph:arrow-left w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-purple-500 transition-colors" />
+                        <div className="i-ph:arrow-left w-4 h-4 text-[#8F9BB3] dark:text-[#C5CEE0] group-hover:text-[#3366FF] transition-colors" />
                       </button>
                     )}
-                    <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+                    <DialogTitle className="text-xl font-semibold text-[#222B45] dark:text-white">
                       {showTabManagement ? 'Tab Management' : activeTab ? TAB_LABELS[activeTab] : 'Control Panel'}
                     </DialogTitle>
                   </div>
 
                   <div className="flex items-center gap-6">
                     {/* Mode Toggle */}
-                    <div className="flex items-center gap-2 min-w-[140px] border-r border-gray-200 dark:border-gray-800 pr-6">
+                    <div className="flex items-center gap-2 min-w-[140px] border-r border-[#E4E9F2] dark:border-[#2E3A59] pr-6">
                       <AnimatedSwitch
                         id="developer-mode"
                         checked={developerMode}
@@ -476,16 +474,16 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
                     </div>
 
                     {/* Avatar and Dropdown */}
-                    <div className="border-l border-gray-200 dark:border-gray-800 pl-6">
+                    <div className="border-l border-[#E4E9F2] dark:border-[#2E3A59] pl-6">
                       <AvatarDropdown onSelectTab={handleTabClick} />
                     </div>
 
                     {/* Close Button */}
                     <button
                       onClick={handleClose}
-                      className="flex items-center justify-center w-8 h-8 rounded-full bg-transparent hover:bg-purple-500/10 dark:hover:bg-purple-500/20 group transition-all duration-200"
+                      className="flex items-center justify-center w-8 h-8 rounded-full bg-transparent hover:bg-[#3366FF]/10 dark:hover:bg-[#3366FF]/20 group transition-all duration-200"
                     >
-                      <div className="i-ph:x w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-purple-500 transition-colors" />
+                      <div className="i-ph:x w-4 h-4 text-[#8F9BB3] dark:text-[#C5CEE0] group-hover:text-[#3366FF] transition-colors" />
                     </button>
                   </div>
                 </div>
@@ -498,8 +496,8 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
                     'hover:overflow-y-auto',
                     'scrollbar scrollbar-w-2',
                     'scrollbar-track-transparent',
-                    'scrollbar-thumb-[#E5E5E5] hover:scrollbar-thumb-[#CCCCCC]',
-                    'dark:scrollbar-thumb-[#333333] dark:hover:scrollbar-thumb-[#444444]',
+                    'scrollbar-thumb-[#8F9BB3] hover:scrollbar-thumb-[#6B7A99]',
+                    'dark:scrollbar-thumb-[#C5CEE0] dark:hover:scrollbar-thumb-[#E4E9F2]',
                     'will-change-scroll',
                     'touch-auto',
                   )}
