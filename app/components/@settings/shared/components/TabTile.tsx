@@ -27,6 +27,12 @@ export const TabTile: React.FC<TabTileProps> = ({
   className,
   children,
 }: TabTileProps) => {
+  const hiddenTabs = ['features', 'local-providers', 'service-status', 'debug', 'tab-management'];
+  
+  if (hiddenTabs.includes(tab.id)) {
+    return null;
+  }
+
   return (
     <Tooltip.Provider delayDuration={200}>
       <Tooltip.Root>
@@ -34,52 +40,63 @@ export const TabTile: React.FC<TabTileProps> = ({
           <motion.div
             onClick={onClick}
             className={classNames(
-              'relative flex flex-col items-center p-6 rounded-xl',
-              'w-full h-full min-h-[160px]',
+              'relative flex flex-col items-center',
+              'p-4 sm:p-5 rounded-xl',
+              'w-full h-full min-h-[140px] sm:min-h-[150px]',
               'bg-white dark:bg-[#141414]',
               'border border-[#E5E5E5] dark:border-[#333333]',
               'group',
               'hover:bg-[#F7F9FC] dark:hover:bg-[#1a1a1a]',
               'hover:border-[#3366FF]/30 dark:hover:border-[#3366FF]/30',
+              'hover:shadow-sm transition-all duration-200',
+              'transform-gpu', // Hardware acceleration
               isActive ? 'border-[#3366FF] dark:border-[#3366FF]/50 bg-[#3366FF]/5 dark:bg-[#3366FF]/10' : '',
               isLoading ? 'cursor-wait opacity-70' : '',
               className || '',
             )}
+            whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
+            whileTap={{ scale: 0.99 }}
+            layout // Animate layout changes
           >
             {/* Main Content */}
-            <div className="flex flex-col items-center justify-center flex-1 w-full">
-              {/* Icon */}
+            <div className="flex flex-col items-center justify-center w-full flex-1 gap-4">
+              {/* Icon Container */}
               <motion.div
                 className={classNames(
                   'relative',
-                  'w-14 h-14',
+                  'w-12 h-12 sm:w-14 sm:h-14', // Responsive sizing
                   'flex items-center justify-center',
                   'rounded-xl',
-                  'bg-gray-100 dark:bg-gray-800',
-                  'ring-1 ring-gray-200 dark:ring-gray-700',
-                  'group-hover:bg-[#3366FF]/10 dark:group-hover:bg-gray-700/80',
+                  'bg-[#F7F9FC] dark:bg-gray-800',
+                  'ring-1 ring-[#E4E9F2] dark:ring-gray-700',
+                  'group-hover:bg-[#3366FF]/10 dark:group-hover:bg-[#3366FF]/20',
                   'group-hover:ring-[#3366FF]/20 dark:group-hover:ring-[#3366FF]/30',
+                  'transition-all duration-200',
                   isActive ? 'bg-[#3366FF]/10 dark:bg-[#3366FF]/10 ring-[#3366FF]/30 dark:ring-[#3366FF]/20' : '',
                 )}
+                layout // Animate layout changes
               >
                 <motion.div
                   className={classNames(
                     TAB_ICONS[tab.id],
-                    'w-8 h-8',
+                    'w-6 h-6 sm:w-7 sm:h-7', // Responsive icon size
                     'text-[#8F9BB3] dark:text-gray-300',
                     'group-hover:text-[#3366FF] dark:group-hover:text-[#3366FF]/80',
+                    'transition-colors duration-200',
                     isActive ? 'text-[#3366FF] dark:text-[#3366FF]/90' : '',
                   )}
+                  layout // Animate layout changes
                 />
               </motion.div>
 
-              {/* Label and Description */}
-              <div className="flex flex-col items-center mt-5 w-full">
+              {/* Text Content */}
+              <div className="flex flex-col items-center text-center space-y-1.5 px-2">
                 <h3
                   className={classNames(
-                    'text-[15px] font-medium leading-snug mb-2',
-                    'text-gray-700 dark:text-gray-200',
+                    'text-sm font-medium leading-tight',
+                    'text-[#222B45] dark:text-gray-200',
                     'group-hover:text-[#3366FF] dark:group-hover:text-[#3366FF]/90',
+                    'transition-colors duration-200',
                     isActive ? 'text-[#3366FF] dark:text-[#3366FF]/90' : '',
                   )}
                 >
@@ -88,11 +105,12 @@ export const TabTile: React.FC<TabTileProps> = ({
                 {description && (
                   <p
                     className={classNames(
-                      'text-[13px] leading-relaxed',
+                      'text-xs leading-relaxed',
                       'text-[#8F9BB3] dark:text-gray-400',
-                      'max-w-[85%]',
-                      'text-center',
-                      'group-hover:text-[#3366FF]/80 dark:group-hover:text-[#3366FF]/70',
+                      'max-w-[95%]',
+                      'line-clamp-2', // Limit to 2 lines
+                      'transition-colors duration-200',
+                      'group-hover:text-[#8F9BB3] dark:group-hover:text-gray-300',
                       isActive ? 'text-[#3366FF]/80 dark:text-[#3366FF]/80' : '',
                     )}
                   >
@@ -102,30 +120,29 @@ export const TabTile: React.FC<TabTileProps> = ({
               </div>
             </div>
 
-            {/* Update Indicator with Tooltip */}
+            {/* Update Indicator */}
             {hasUpdate && (
               <>
-                <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-[#3366FF] dark:bg-[#3366FF] animate-pulse" />
+                <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-[#3366FF] animate-pulse" />
                 <Tooltip.Portal>
                   <Tooltip.Content
                     className={classNames(
-                      'px-3 py-1.5 rounded-lg',
-                      'bg-[#18181B] text-white',
-                      'text-sm font-medium',
-                      'select-none',
+                      'px-2.5 py-1.5 rounded-lg',
+                      'bg-[#222B45] text-white',
+                      'text-xs font-medium',
+                      'select-none shadow-sm',
                       'z-[100]',
                     )}
                     side="top"
                     sideOffset={5}
                   >
                     {statusMessage}
-                    <Tooltip.Arrow className="fill-[#18181B]" />
+                    <Tooltip.Arrow className="fill-[#222B45]" />
                   </Tooltip.Content>
                 </Tooltip.Portal>
               </>
             )}
 
-            {/* Children (e.g. Beta Label) */}
             {children}
           </motion.div>
         </Tooltip.Trigger>
