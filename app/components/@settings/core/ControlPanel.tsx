@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@nanostores/react';
-import { Switch } from '@radix-ui/react-switch';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { classNames } from '~/utils/classNames';
 import { TabManagement } from '~/components/@settings/shared/components/TabManagement';
@@ -14,15 +13,12 @@ import { useDebugStatus } from '~/lib/hooks/useDebugStatus';
 import {
   tabConfigurationStore,
   developerModeStore,
-  setDeveloperMode,
   resetTabConfiguration,
 } from '~/lib/stores/settings';
 import { profileStore } from '~/lib/stores/profile';
 import type { TabType, TabVisibilityConfig, Profile } from './types';
 import { TAB_LABELS, DEFAULT_TAB_CONFIG } from './constants';
 import { DialogTitle } from '~/components/ui/Dialog';
-import { AvatarDropdown } from './AvatarDropdown';
-import BackgroundRays from '~/components/ui/BackgroundRays';
 
 // Import all tab components
 import ProfileTab from '~/components/@settings/tabs/profile/ProfileTab';
@@ -50,6 +46,7 @@ interface TabWithDevType extends TabVisibilityConfig {
 
 interface ExtendedTabConfig extends TabVisibilityConfig {
   isExtraDevTab?: boolean;
+  category?: string; // Add the category property to the interface
 }
 
 interface BaseTabConfig {
@@ -57,13 +54,6 @@ interface BaseTabConfig {
   visible: boolean;
   window: 'user' | 'developer';
   order: number;
-}
-
-interface AnimatedSwitchProps {
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-  id: string;
-  label: string;
 }
 
 const TAB_DESCRIPTIONS: Record<TabType, string> = {
@@ -92,66 +82,6 @@ const BetaLabel = () => (
   </div>
 );
 
-const AnimatedSwitch = ({ checked, onCheckedChange, id, label }: AnimatedSwitchProps) => {
-  return (
-    <div className="flex items-center gap-2">
-      <Switch
-        id={id}
-        checked={checked}
-        onCheckedChange={onCheckedChange}
-        className={classNames(
-          'relative inline-flex h-6 w-11 items-center rounded-full',
-          'transition-all duration-300 ease-[cubic-bezier(0.87,_0,_0.13,_1)]',
-          'bg-gray-200 dark:bg-gray-700',
-          'data-[state=checked]:bg-[#3366FF]',
-          'focus:outline-none focus:ring-2 focus:ring-[#3366FF]/20',
-          'cursor-pointer',
-          'group',
-        )}
-      >
-        <motion.span
-          className={classNames(
-            'absolute left-[2px] top-[2px]',
-            'inline-block h-5 w-5 rounded-full',
-            'bg-white shadow-lg',
-            'transition-shadow duration-300',
-            'group-hover:shadow-md group-active:shadow-sm',
-            'group-hover:scale-95 group-active:scale-90',
-          )}
-          initial={false}
-          transition={{
-            type: 'spring',
-            stiffness: 500,
-            damping: 30,
-            duration: 0.2,
-          }}
-          animate={{
-            x: checked ? '1.25rem' : '0rem',
-          }}
-        >
-          <motion.div
-            className="absolute inset-0 rounded-full bg-white"
-            initial={false}
-            animate={{
-              scale: checked ? 1 : 0.8,
-            }}
-            transition={{ duration: 0.2 }}
-          />
-        </motion.span>
-        <span className="sr-only">Toggle {label}</span>
-      </Switch>
-      <div className="flex items-center gap-2">
-        <label
-          htmlFor={id}
-          className="text-sm text-gray-500 dark:text-gray-400 select-none cursor-pointer whitespace-nowrap w-[88px]"
-        >
-          {label}
-        </label>
-      </div>
-    </div>
-  );
-};
-
 export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
   // State
   const [activeTab, setActiveTab] = useState<TabType | null>(null);
@@ -175,67 +105,64 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
     return new Map(DEFAULT_TAB_CONFIG.map((tab) => [tab.id, tab]));
   }, []);
 
-  // Add visibleTabs logic using useMemo with optimized calculations
+  // Unified tab display logic - show all available tabs in a single view
   const visibleTabs = useMemo(() => {
     if (!tabConfiguration?.userTabs || !Array.isArray(tabConfiguration.userTabs)) {
-      console.warn('Invalid tab configuration, resetting to defaults');
+      
       resetTabConfiguration();
-
       return [];
     }
-
+  
     const notificationsDisabled = profile?.preferences?.notifications === false;
-
-    // In developer mode, show ALL tabs without restrictions
-    if (developerMode) {
-      const seenTabs = new Set<TabType>();
-      const devTabs: ExtendedTabConfig[] = [];
-
-      // Process tabs in order of priority: developer, user, default
-      const processTab = (tab: BaseTabConfig) => {
-        if (!seenTabs.has(tab.id)) {
-          seenTabs.add(tab.id);
-          devTabs.push({
-            id: tab.id,
-            visible: true,
-            window: 'developer',
-            order: tab.order || devTabs.length,
+  
+    // Define tab categories for organization
+    const tabCategories = {
+      account: ['profile', 'settings'],
+      content: ['notifications', 'features', 'data', 'update'],
+      providers: ['cloud-providers', 'local-providers', 'service-status'],
+      system: ['connection', 'debug', 'event-logs', 'task-manager'],
+      management: ['tab-management']
+    };
+    
+    // Combine all tabs from user and developer modes
+    const allTabs = new Set([
+      ...DEFAULT_TAB_CONFIG.map(tab => tab.id),
+      ...tabConfiguration.userTabs.map(tab => tab.id),
+      ...(tabConfiguration.developerTabs || []).map(tab => tab.id)
+    ]);
+    
+    // Create a unified tab list
+    const unifiedTabs: ExtendedTabConfig[] = [];
+    let order = 0;
+    
+    // Process tabs by category for better organization
+    Object.entries(tabCategories).forEach(([category, tabIds]) => {
+      tabIds.forEach(tabId => {
+        if (allTabs.has(tabId as TabType)) {
+          // Skip notifications if disabled in preferences
+          if (tabId === 'notifications' && notificationsDisabled) {
+            return;
+          }
+          
+          // Find existing configuration for this tab
+          const existingTab = 
+            tabConfiguration.userTabs.find(t => t.id === tabId) || 
+            tabConfiguration.developerTabs?.find(t => t.id === tabId) ||
+            DEFAULT_TAB_CONFIG.find(t => t.id === tabId);
+          
+          unifiedTabs.push({
+            id: tabId as TabType,
+            visible: true, // Show all tabs in the unified view
+            window: existingTab?.window || 'user',
+            order: order++,
+            category // Add category for potential future grouping
           });
         }
-      };
-
-      // Process tabs in priority order
-      tabConfiguration.developerTabs?.forEach((tab) => processTab(tab as BaseTabConfig));
-      tabConfiguration.userTabs.forEach((tab) => processTab(tab as BaseTabConfig));
-      DEFAULT_TAB_CONFIG.forEach((tab) => processTab(tab as BaseTabConfig));
-
-      // Add Tab Management tile
-      devTabs.push({
-        id: 'tab-management' as TabType,
-        visible: true,
-        window: 'developer',
-        order: devTabs.length,
-        isExtraDevTab: true,
       });
-
-      return devTabs.sort((a, b) => a.order - b.order);
-    }
-
-    // Optimize user mode tab filtering
-    return tabConfiguration.userTabs
-      .filter((tab) => {
-        if (!tab?.id) {
-          return false;
-        }
-
-        if (tab.id === 'notifications' && notificationsDisabled) {
-          return false;
-        }
-
-        return tab.visible && tab.window === 'user';
-      })
-      .sort((a, b) => a.order - b.order);
-  }, [tabConfiguration, developerMode, profile?.preferences?.notifications, baseTabConfig]);
+    });
+    
+    return unifiedTabs;
+  }, [tabConfiguration, profile?.preferences?.notifications]);
 
   // Optimize animation performance with layout animations
   const gridLayoutVariants = {
@@ -292,16 +219,6 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
       setActiveTab(null);
     }
   };
-
-  const handleDeveloperModeChange = (checked: boolean) => {
-    console.log('Developer mode changed:', checked);
-    setDeveloperMode(checked);
-  };
-
-  // Add effect to log developer mode changes
-  useEffect(() => {
-    console.log('Current developer mode:', developerMode);
-  }, [developerMode]);
 
   const getTabComponent = (tabId: TabType | 'tab-management') => {
     if (tabId === 'tab-management') {
@@ -437,14 +354,13 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
                 'border border-[#E4E9F2]',
                 'flex flex-col overflow-hidden',
                 'relative',
-                'bg-[#F7F9FC] dark:bg-[#222B45]' // Changed from transparent to InitFlow colors
+                'bg-[#F7F9FC] dark:bg-[#222B45]'
               )}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2 }}
             >
-              {/* Remove the BackgroundRays component */}
               <div className="relative z-10 flex flex-col h-full">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-[#E4E9F2] dark:border-[#2E3A59] bg-white dark:bg-[#1A2138]">
@@ -458,34 +374,17 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
                       </button>
                     )}
                     <DialogTitle className="text-xl font-semibold text-[#222B45] dark:text-white">
-                      {showTabManagement ? 'Tab Management' : activeTab ? TAB_LABELS[activeTab] : 'Control Panel'}
+                      {showTabManagement ? 'Tab Management' : activeTab ? TAB_LABELS[activeTab] : 'Settings'}
                     </DialogTitle>
                   </div>
 
-                  <div className="flex items-center gap-6">
-                    {/* Mode Toggle */}
-                    <div className="flex items-center gap-2 min-w-[140px] border-r border-[#E4E9F2] dark:border-[#2E3A59] pr-6">
-                      <AnimatedSwitch
-                        id="developer-mode"
-                        checked={developerMode}
-                        onCheckedChange={handleDeveloperModeChange}
-                        label={developerMode ? 'Developer Mode' : 'User Mode'}
-                      />
-                    </div>
-
-                    {/* Avatar and Dropdown */}
-                    <div className="border-l border-[#E4E9F2] dark:border-[#2E3A59] pl-6">
-                      <AvatarDropdown onSelectTab={handleTabClick} />
-                    </div>
-
-                    {/* Close Button */}
-                    <button
-                      onClick={handleClose}
-                      className="flex items-center justify-center w-8 h-8 rounded-full bg-transparent hover:bg-[#3366FF]/10 dark:hover:bg-[#3366FF]/20 group transition-all duration-200"
-                    >
-                      <div className="i-ph:x w-4 h-4 text-[#8F9BB3] dark:text-[#C5CEE0] group-hover:text-[#3366FF] transition-colors" />
-                    </button>
-                  </div>
+                  {/* Close Button */}
+                  <button
+                    onClick={handleClose}
+                    className="flex items-center justify-center w-8 h-8 rounded-full bg-transparent hover:bg-[#3366FF]/10 dark:hover:bg-[#3366FF]/20 group transition-all duration-200"
+                  >
+                    <div className="i-ph:x w-4 h-4 text-[#8F9BB3] dark:text-[#C5CEE0] group-hover:text-[#3366FF] transition-colors" />
+                  </button>
                 </div>
 
                 {/* Content */}
@@ -515,31 +414,97 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
                     ) : activeTab ? (
                       getTabComponent(activeTab)
                     ) : (
-                      <motion.div
-                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative"
-                        variants={gridLayoutVariants}
-                        initial="hidden"
-                        animate="visible"
-                      >
-                        <AnimatePresence mode="popLayout">
-                          {(visibleTabs as TabWithDevType[]).map((tab: TabWithDevType) => (
-                            <motion.div key={tab.id} layout variants={itemVariants} className="aspect-[1.5/1]">
-                              <TabTile
-                                tab={tab}
-                                onClick={() => handleTabClick(tab.id as TabType)}
-                                isActive={activeTab === tab.id}
-                                hasUpdate={getTabUpdateStatus(tab.id)}
-                                statusMessage={getStatusMessage(tab.id)}
-                                description={TAB_DESCRIPTIONS[tab.id]}
-                                isLoading={loadingTab === tab.id}
-                                className="h-full relative"
-                              >
-                                {BETA_TABS.has(tab.id) && <BetaLabel />}
-                              </TabTile>
-                            </motion.div>
-                          ))}
-                        </AnimatePresence>
-                      </motion.div>
+                      <div className="space-y-8">
+                        {/* Search bar for filtering tabs (optional enhancement) */}
+                        {/* <div className="relative w-full max-w-md mx-auto mb-6">
+                          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <div className="i-ph:magnifying-glass w-5 h-5 text-[#8F9BB3]" />
+                          </div>
+                          <input
+                            type="search"
+                            className="block w-full p-2.5 pl-10 text-sm rounded-lg bg-white dark:bg-[#1A2138] border border-[#E4E9F2] dark:border-[#2E3A59] focus:ring-[#3366FF] focus:border-[#3366FF]"
+                            placeholder="Search settings..."
+                          />
+                        </div> */}
+                        
+                        {/* Account Section */}
+                        <div>
+                          <h2 className="text-lg font-medium text-[#222B45] dark:text-white mb-4">Account & Preferences</h2>
+                          <motion.div
+                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative"
+                            variants={gridLayoutVariants}
+                            initial="hidden"
+                            animate="visible"
+                          >
+                            <AnimatePresence mode="popLayout">
+                              {visibleTabs
+                                .filter(tab => ['profile', 'settings'].includes(tab.id))
+                                .map((tab) => (
+                                  <motion.div 
+                                    key={tab.id} 
+                                    layout 
+                                    variants={itemVariants} 
+                                    className="aspect-[1.5/1]"
+                                  >
+                                    <TabTile
+                                      tab={tab}
+                                      onClick={() => handleTabClick(tab.id as TabType)}
+                                      isActive={activeTab === tab.id}
+                                      hasUpdate={getTabUpdateStatus(tab.id)}
+                                      statusMessage={getStatusMessage(tab.id)}
+                                      description={TAB_DESCRIPTIONS[tab.id]}
+                                      isLoading={loadingTab === tab.id}
+                                      className="h-full relative"
+                                    >
+                                      {BETA_TABS.has(tab.id) && <BetaLabel />}
+                                    </TabTile>
+                                  </motion.div>
+                                ))}
+                            </AnimatePresence>
+                          </motion.div>
+                        </div>
+                        
+                        {/* Content & Features Section - Modified to remove notifications and update */}
+                        <div>
+                          <h2 className="text-lg font-medium text-[#222B45] dark:text-white mb-4">Content & Features</h2>
+                          <motion.div
+                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative"
+                            variants={gridLayoutVariants}
+                            initial="hidden"
+                            animate="visible"
+                          >
+                            <AnimatePresence mode="popLayout">
+                              {visibleTabs
+                                .filter(tab => ['features', 'data'].includes(tab.id))
+                                .map((tab) => (
+                                  <motion.div 
+                                    key={tab.id} 
+                                    layout 
+                                    variants={itemVariants} 
+                                    className="aspect-[1.5/1]"
+                                  >
+                                    <TabTile
+                                      tab={tab}
+                                      onClick={() => handleTabClick(tab.id as TabType)}
+                                      isActive={activeTab === tab.id}
+                                      hasUpdate={getTabUpdateStatus(tab.id)}
+                                      statusMessage={getStatusMessage(tab.id)}
+                                      description={TAB_DESCRIPTIONS[tab.id]}
+                                      isLoading={loadingTab === tab.id}
+                                      className="h-full relative"
+                                    >
+                                      {BETA_TABS.has(tab.id) && <BetaLabel />}
+                                    </TabTile>
+                                  </motion.div>
+                                ))}
+                            </AnimatePresence>
+                          </motion.div>
+                        </div>
+                        
+                        {/* AI Providers Section - Removed */}
+                        
+                        {/* System & Advanced Section - Already Removed */}
+                      </div>
                     )}
                   </motion.div>
                 </div>

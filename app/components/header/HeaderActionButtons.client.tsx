@@ -193,16 +193,9 @@ export function HeaderActionButtons({}: HeaderActionButtonsProps) {
           <div className="absolute right-2 flex flex-col gap-1 z-50 p-1 mt-1 min-w-[13.5rem] bg-white dark:bg-gray-900 rounded-md shadow-lg border border-[#E4E9F2] dark:border-gray-700">
             <Button
               active={false}
+              onClick={() => document.dispatchEvent(new CustomEvent('open-supabase-connection'))}
               className="flex items-center w-full px-4 py-2 text-sm text-[#2E3A59] dark:text-white hover:bg-[#EDF1FC] dark:hover:bg-[#3366FF]/10 gap-2 rounded-md group relative transition-colors"
             >
-              <img
-                className="w-5 h-5"
-                height="24"
-                width="24"
-                crossOrigin="anonymous"
-                src="https://cdn.simpleicons.org/supabase"
-                alt="supabase"
-              />
               <span className="mx-auto font-medium">Supabase</span>
               <SupabaseConnection />
             </Button>
@@ -228,8 +221,8 @@ function Button({ active = false, disabled = false, children, onClick, className
         'flex items-center p-1.5',
         {
           'bg-bolt-elements-item-backgroundDefault hover:bg-bolt-elements-item-backgroundActive text-bolt-elements-textTertiary hover:text-bolt-elements-textPrimary':
-            !active,
-          'bg-bolt-elements-item-backgroundAccent text-bolt-elements-item-contentAccent': active && !disabled,
+            !active && !className,
+          'bg-bolt-elements-item-backgroundAccent text-[#3366FF]': active && !disabled && !className,
           'bg-bolt-elements-item-backgroundDefault text-alpha-gray-20 dark:text-alpha-white-20 cursor-not-allowed':
             disabled,
         },

@@ -458,7 +458,7 @@ function getReadOnlyTooltip(state: EditorState) {
         create: () => {
           const divElement = document.createElement('div');
           divElement.className = 'cm-readonly-tooltip';
-          divElement.textContent = 'Cannot edit file while AI response is being generated';
+          divElement.textContent = 'Wait for the AI to complete building the app';
 
           return { dom: divElement };
         },

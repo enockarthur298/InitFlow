@@ -1,14 +1,34 @@
 import React from 'react';
+import { useAuth } from '@clerk/remix';
+
+// Interface for the sendMessage function with additional showAuthDialog parameter
+interface SendMessageFunction {
+  (event: React.UIEvent, messageInput?: string): void | undefined;
+  showAuthDialog?: () => void;
+}
 
 const EXAMPLE_PROMPTS = [
   { text: 'Build a real estate listings site with interactive maps' },
   { text: 'Design a modern personal portfolio website' },
   { text: 'Develop a social media dashboard with engagement metrics' },
   { text: 'Create an e-commerce product page with image gallery' },
-  
 ];
 
-export function ExamplePrompts(sendMessage?: { (event: React.UIEvent, messageInput?: string): void | undefined }) {
+export function ExamplePrompts(sendMessage?: SendMessageFunction) {
+  const { isSignedIn } = useAuth(); // Get authentication status
+
+  // Handle template selection with auth check
+  const handleTemplateClick = (event: React.UIEvent, promptText: string) => {
+    if (!isSignedIn && sendMessage?.showAuthDialog) {
+      // Show auth dialog if user is not signed in
+      sendMessage.showAuthDialog();
+      return;
+    }
+    
+    // Otherwise proceed with sending the message
+    sendMessage?.(event, promptText);
+  };
+
   return (
     <div id="examples" className="relative flex flex-col gap-6 w-full max-w-3xl mx-auto mt-8">
       <div className="text-center mb-4">
@@ -26,9 +46,7 @@ export function ExamplePrompts(sendMessage?: { (event: React.UIEvent, messageInp
           return (
             <button
               key={index}
-              onClick={(event) => {
-                sendMessage?.(event, examplePrompt.text);
-              }}
+              onClick={(event) => handleTemplateClick(event, examplePrompt.text)}
               className={`
                 group relative overflow-hidden rounded-lg border border-bolt-elements-borderColor/30
                 bg-bolt-elements-background-depth-2 hover:bg-bolt-elements-background-depth-3

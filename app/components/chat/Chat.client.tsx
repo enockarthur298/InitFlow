@@ -709,4 +709,3 @@ const sendMessage = (event: React.UIEvent, messageInput?: string) => {
   // ... potentially other cleanup ...
 };
 
-

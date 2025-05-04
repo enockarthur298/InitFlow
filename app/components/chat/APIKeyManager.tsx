@@ -64,7 +64,6 @@ export const APIKeyManager: React.FC<APIKeyManagerProps> = ({ provider, apiKey, 
       providerEnvKeyStatusCache[provider.name] = isSet;
       setIsEnvKeySet(isSet);
     } catch (error) {
-      console.error('Failed to check environment API key:', error);
       setIsEnvKeySet(false);
     }
   }, [provider.name]);

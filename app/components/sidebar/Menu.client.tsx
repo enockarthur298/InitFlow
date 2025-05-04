@@ -14,6 +14,7 @@ import { useSearchFilter } from '~/lib/hooks/useSearchFilter';
 import { classNames } from '~/utils/classNames';
 import { useStore } from '@nanostores/react';
 import { profileStore } from '~/lib/stores/profile';
+import { useAuth } from '@clerk/remix'; // Add this import
 
 // Updated menu variants with smoother transitions
 const menuVariants = {
@@ -45,6 +46,7 @@ type DialogContent =
 // Remove CurrentDateTime component since it's no longer needed
 
 export const Menu = () => {
+  const { isSignedIn } = useAuth(); // Add authentication check
   const { duplicateCurrentChat, exportChat } = useChatHistory();
   const menuRef = useRef<HTMLDivElement>(null);
   const [list, setList] = useState<ChatHistoryItem[]>([]);
@@ -83,12 +85,11 @@ export const Menu = () => {
         localStorage.removeItem(snapshotKey);
         console.log('Removed snapshot for chat:', id);
       } catch (snapshotError) {
-        console.error(`Error deleting snapshot for chat ${id}:`, snapshotError);
+        
       }
 
       // Delete the chat from the database
       await deleteById(db, id);
-      console.log('Successfully deleted chat:', id);
     },
     [db],
   );
@@ -99,8 +100,7 @@ export const Menu = () => {
       event.stopPropagation();
 
       // Log the delete operation to help debugging
-      console.log('Attempting to delete chat:', { id: item.id, description: item.description });
-
+      
       deleteChat(item.id)
         .then(() => {
           toast.success('Chat deleted successfully', {
@@ -112,13 +112,12 @@ export const Menu = () => {
           loadEntries();
 
           if (chatId.get() === item.id) {
-            // hard page navigation to clear the stores
-            console.log('Navigating away from deleted chat');
+            
             window.location.pathname = '/';
           }
         })
         .catch((error) => {
-          console.error('Failed to delete chat:', error);
+          
           toast.error('Failed to delete conversation', {
             position: 'bottom-right',
             autoClose: 3000,
@@ -135,12 +134,11 @@ export const Menu = () => {
   const deleteSelectedItems = useCallback(
     async (itemsToDeleteIds: string[]) => {
       if (!db || itemsToDeleteIds.length === 0) {
-        console.log('Bulk delete skipped: No DB or no items to delete.');
+      
         return;
       }
 
-      console.log(`Starting bulk delete for ${itemsToDeleteIds.length} chats`, itemsToDeleteIds);
-
+      
       let deletedCount = 0;
       const errors: string[] = [];
       const currentChatId = chatId.get();
@@ -156,7 +154,7 @@ export const Menu = () => {
             shouldNavigate = true;
           }
         } catch (error) {
-          console.error(`Error deleting chat ${id}:`, error);
+         
           errors.push(id);
         }
       }
@@ -207,7 +205,7 @@ export const Menu = () => {
 
   const handleBulkDeleteClick = useCallback(() => {
     if (selectedItems.length === 0) {
-      toast.info('Select at least one chat to delete');
+      
       return;
     }
 
@@ -229,14 +227,12 @@ export const Menu = () => {
       if (allFilteredAreSelected) {
         // Deselect only the filtered items
         const newSelectedItems = prev.filter((id) => !allFilteredIds.includes(id));
-        console.log('Deselecting all filtered items. New selection:', newSelectedItems);
-
+       
         return newSelectedItems;
       } else {
         // Select all filtered items, adding them to any existing selections
         const newSelectedItems = [...new Set([...prev, ...allFilteredIds])];
-        console.log('Selecting all filtered items. New selection:', newSelectedItems);
-
+       
         return newSelectedItems;
       }
     });
@@ -251,10 +247,11 @@ export const Menu = () => {
 
   useEffect(() => {
     if (!open && selectionMode) {
-      console.log('Sidebar closed, preserving selection state');
+      
     }
   }, [open, selectionMode]);
 
+  // Modify the useEffect for mouse movement to check authentication
   useEffect(() => {
     const enterThreshold = 40;
     const exitThreshold = 40;
@@ -264,7 +261,8 @@ export const Menu = () => {
         return;
       }
 
-      if (event.pageX < enterThreshold) {
+      // Only allow opening the sidebar if user is authenticated
+      if (event.pageX < enterThreshold && isSignedIn) {
         setOpen(true);
       }
 
@@ -278,7 +276,7 @@ export const Menu = () => {
     return () => {
       window.removeEventListener('mousemove', onMouseMove);
     };
-  }, [isSettingsOpen]);
+  }, [isSettingsOpen, isSignedIn]); // Add isSignedIn to dependencies
 
   const handleDuplicate = async (id: string) => {
     await duplicateCurrentChat(id);
@@ -295,87 +293,89 @@ export const Menu = () => {
   };
 
   const setDialogContentWithLogging = useCallback((content: DialogContent) => {
-    console.log('Setting dialog content:', content);
+    
     setDialogContent(content);
   }, []);
 
   return (
     <>
-      <motion.div
-        ref={menuRef}
-        initial="closed"
-        animate={open ? 'open' : 'closed'}
-        variants={menuVariants}
-        style={{ width: '340px' }}
-        className={classNames(
-          'flex selection-accent flex-col side-menu fixed top-0 h-full',
-          'bg-[#F7F9FC] dark:bg-gray-900 border-r border-[#E4E9F2] dark:border-gray-800/50',
-          'shadow-lg text-sm z-sidebar',
-          isSettingsOpen ? 'z-40' : 'z-sidebar',
-        )}
-      >
-        {/* Modern header with gradient accent */}
-        <div className="relative h-16 flex items-center justify-between px-5 border-b border-[#E4E9F2] dark:border-gray-800/50 bg-white dark:bg-gray-900">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#3366FF] to-[#5E81F4]"></div>
-          <div className="text-[#2E3A59] dark:text-white font-medium flex items-center gap-2">
-            <span className="i-lucide:layout-dashboard h-5 w-5 text-[#3366FF]" />
-            <span className="font-semibold">InitFlow</span>
-          </div>
-          <div className="flex items-center gap-3">
-            {profile?.avatar ? (
-              <div className="relative">
-                <img
-                  src={profile.avatar}
-                  alt={profile?.username}
-                  className="w-9 h-9 rounded-full object-cover border-2 border-white dark:border-gray-800 shadow-sm"
-                  loading="eager"
-                  decoding="sync"
-                />
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center w-9 h-9 rounded-full bg-[#3366FF]/10 text-[#3366FF] shadow-sm">
-                <div className="i-ph:user-circle-duotone text-xl" />
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex-1 flex flex-col h-full w-full overflow-hidden">
-          {/* Search and action buttons */}
-          <div className="p-4 space-y-3">
-            <div className="flex gap-2">
-              <a
-                href="/"
-                className="flex-1 flex gap-2 items-center bg-[#3366FF] text-white hover:bg-[#2952CC] rounded-lg px-4 py-2.5 transition-colors shadow-sm"
-              >
-                <span className="inline-block i-ph:plus-circle-duotone h-4 w-4" />
-                <span className="text-sm font-medium">New Project</span>
-              </a>
-              <button
-                onClick={toggleSelectionMode}
-                className={classNames(
-                  'flex gap-1 items-center rounded-lg px-3 py-2.5 transition-colors shadow-sm',
-                  selectionMode
-                    ? 'bg-[#3366FF] text-white'
-                    : 'bg-white dark:bg-gray-800 text-[#8F9BB3] dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-[#E4E9F2] dark:border-gray-700',
-                )}
-                aria-label={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
-              >
-                <span className={selectionMode ? 'i-ph:x-circle-duotone h-4 w-4' : 'i-ph:check-square-duotone h-4 w-4'} />
-              </button>
+      {isSignedIn && ( // Only render the sidebar if user is authenticated
+        <motion.div
+          ref={menuRef}
+          initial="closed"
+          animate={open ? 'open' : 'closed'}
+          variants={menuVariants}
+          style={{ width: '340px' }}
+          className={classNames(
+            'flex selection-accent flex-col side-menu fixed top-0 h-full',
+            'bg-[#F7F9FC] dark:bg-gray-900 border-r border-[#E4E9F2] dark:border-gray-800/50',
+            'shadow-lg text-sm z-sidebar',
+            isSettingsOpen ? 'z-40' : 'z-sidebar',
+          )}
+        >
+          {/* Modern header with gradient accent */}
+          <div className="relative h-16 flex items-center justify-between px-5 border-b border-[#E4E9F2] dark:border-gray-800/50 bg-white dark:bg-gray-900">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#3366FF] to-[#5E81F4]"></div>
+            <div className="text-[#2E3A59] dark:text-white font-medium flex items-center gap-2">
+              <span className="i-lucide:layout-dashboard h-5 w-5 text-[#3366FF]" />
+              <span className="font-semibold">InitFlow</span>
             </div>
-            <div className="relative w-full">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                <span className="i-ph:magnifying-glass h-4 w-4 text-[#8F9BB3]" />
+            <div className="flex items-center gap-3">
+              {profile?.avatar ? (
+                <div className="relative">
+                  <img
+                    src={profile.avatar}
+                    alt={profile?.username}
+                    className="w-9 h-9 rounded-full object-cover border-2 border-white dark:border-gray-800 shadow-sm"
+                    loading="eager"
+                    decoding="sync"
+                  />
+                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-[#3366FF]/10 text-[#3366FF] shadow-sm">
+                  <div className="i-ph:user-circle-duotone text-xl" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col h-full w-full overflow-hidden">
+            {/* Search and action buttons */}
+            <div className="p-4 space-y-3">
+              <div className="flex gap-2">
+                <a
+                  href="/"
+                  className="flex-1 flex gap-2 items-center bg-[#3366FF] text-white hover:bg-[#2952CC] rounded-lg px-4 py-2.5 transition-colors shadow-sm"
+                >
+                  <span className="inline-block i-ph:plus-circle-duotone h-4 w-4" />
+                  <span className="text-sm font-medium">New Project</span>
+                </a>
+                <button
+                  onClick={toggleSelectionMode}
+                  className={classNames(
+                    'flex gap-1 items-center rounded-lg px-3 py-2.5 transition-colors shadow-sm',
+                    selectionMode
+                      ? 'bg-[#3366FF] text-white'
+                      : 'bg-white dark:bg-gray-800 text-[#8F9BB3] dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-[#E4E9F2] dark:border-gray-700',
+                  )}
+                  aria-label={selectionMode ? 'Exit selection mode' : 'Enter selection mode'}
+                >
+                  <span className={selectionMode ? 'i-ph:x-circle-duotone h-4 w-4' : 'i-ph:check-square-duotone h-4 w-4'} />
+                </button>
               </div>
-              <input
-                className="w-full bg-white dark:bg-gray-800 relative pl-9 pr-3 py-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#3366FF]/50 text-sm text-[#2E3A59] dark:text-gray-100 placeholder-[#8F9BB3] dark:placeholder-gray-500 border border-[#E4E9F2] dark:border-gray-700 shadow-sm"
-                type="search"
-                placeholder="Search project..."
-                onChange={handleSearchChange}
-                aria-label="Search project"
-              />
+              <div className="relative w-full">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                  <span className="i-ph:magnifying-glass h-4 w-4 text-[#8F9BB3]" />
+                </div>
+                <input
+                  className="w-full bg-white dark:bg-gray-800 relative pl-9 pr-3 py-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#3366FF]/50 text-sm text-[#2E3A59] dark:text-gray-100 placeholder-[#8F9BB3] dark:placeholder-gray-500 border border-[#E4E9F2] dark:border-gray-700 shadow-sm"
+                  type="search"
+                  placeholder="Search project..."
+                  onChange={handleSearchChange}
+                  aria-label="Search project"
+                />
+              </div>
             </div>
           </div>
 
@@ -520,8 +520,8 @@ export const Menu = () => {
             {/* Theme toggle commented out but functionality preserved */}
             {/* <ThemeSwitch /> */}
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      )}
       <ControlPanel open={isSettingsOpen} onClose={handleSettingsClose} />
     </>
   );

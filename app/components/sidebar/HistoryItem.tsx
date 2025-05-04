@@ -56,7 +56,7 @@ export function HistoryItem({
     (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
       event.preventDefault();
       event.stopPropagation();
-      console.log('Delete button clicked for item:', item.id);
+      
 
       if (onDelete) {
         onDelete(event as unknown as React.UIEvent);
