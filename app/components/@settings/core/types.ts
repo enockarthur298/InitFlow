@@ -16,7 +16,8 @@ export type TabType =
   | 'event-logs'
   | 'update'
   | 'task-manager'
-  | 'tab-management';
+  | 'tab-management'
+  | 'billing'; // Added billing tab type
 
 export type WindowType = 'user' | 'developer';
 
@@ -75,12 +76,13 @@ export const TAB_LABELS: Record<TabType, string> = {
   'cloud-providers': 'Cloud Providers',
   'local-providers': 'Local Providers',
   'service-status': 'Service Status',
-  connection: 'Connections',
+  connection: 'Connection',
   debug: 'Debug',
   'event-logs': 'Event Logs',
   update: 'Updates',
   'task-manager': 'Task Manager',
   'tab-management': 'Tab Management',
+  billing: 'Billing & Subscription', // Added billing label
 };
 
 export const categoryLabels: Record<SettingCategory, string> = {

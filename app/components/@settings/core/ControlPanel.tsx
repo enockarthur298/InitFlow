@@ -34,6 +34,7 @@ import CloudProvidersTab from '~/components/@settings/tabs/providers/cloud/Cloud
 import ServiceStatusTab from '~/components/@settings/tabs/providers/status/ServiceStatusTab';
 import LocalProvidersTab from '~/components/@settings/tabs/providers/local/LocalProvidersTab';
 import TaskManagerTab from '~/components/@settings/tabs/task-manager/TaskManagerTab';
+import BillingTab from '~/components/@settings/tabs/billing/BillingTab';
 
 interface ControlPanelProps {
   open: boolean;
@@ -71,10 +72,11 @@ const TAB_DESCRIPTIONS: Record<TabType, string> = {
   update: 'Check for updates and release notes',
   'task-manager': 'Monitor system resources and processes',
   'tab-management': 'Configure visible tabs and their order',
+  billing: 'Manage your subscription and billing details',
 };
 
 // Beta status for experimental features
-const BETA_TABS = new Set<TabType>(['task-manager', 'service-status', 'update', 'local-providers']);
+const BETA_TABS = new Set<TabType>(['task-manager', 'service-status', 'update', 'local-providers', 'billing']);
 
 const BetaLabel = () => (
   <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-[#3366FF]/10 dark:bg-[#3366FF]/20">
@@ -117,7 +119,7 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
   
     // Define tab categories for organization
     const tabCategories = {
-      account: ['profile', 'settings'],
+      account: ['profile', 'settings', 'billing'],
       content: ['notifications', 'features', 'data', 'update'],
       providers: ['cloud-providers', 'local-providers', 'service-status'],
       system: ['connection', 'debug', 'event-logs', 'task-manager'],
@@ -252,6 +254,8 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
         return <TaskManagerTab />;
       case 'service-status':
         return <ServiceStatusTab />;
+      case 'billing':
+        return <BillingTab />;
       default:
         return null;
     }
@@ -415,30 +419,18 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
                       getTabComponent(activeTab)
                     ) : (
                       <div className="space-y-8">
-                        {/* Search bar for filtering tabs (optional enhancement) */}
-                        {/* <div className="relative w-full max-w-md mx-auto mb-6">
-                          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                            <div className="i-ph:magnifying-glass w-5 h-5 text-[#8F9BB3]" />
-                          </div>
-                          <input
-                            type="search"
-                            className="block w-full p-2.5 pl-10 text-sm rounded-lg bg-white dark:bg-[#1A2138] border border-[#E4E9F2] dark:border-[#2E3A59] focus:ring-[#3366FF] focus:border-[#3366FF]"
-                            placeholder="Search settings..."
-                          />
-                        </div> */}
-                        
-                        {/* Account Section */}
+                        {/* Account & Preferences Section - Updated with Billing */}
                         <div>
                           <h2 className="text-lg font-medium text-[#222B45] dark:text-white mb-4">Account & Preferences</h2>
                           <motion.div
-                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative"
+                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 relative"
                             variants={gridLayoutVariants}
                             initial="hidden"
                             animate="visible"
                           >
                             <AnimatePresence mode="popLayout">
                               {visibleTabs
-                                .filter(tab => ['profile', 'settings'].includes(tab.id))
+                                .filter(tab => ['profile', 'settings', 'billing'].includes(tab.id))
                                 .map((tab) => (
                                   <motion.div 
                                     key={tab.id} 
@@ -464,18 +456,18 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
                           </motion.div>
                         </div>
                         
-                        {/* Content & Features Section - Modified to remove notifications and update */}
+                        {/* Content & Features Section */}
                         <div>
                           <h2 className="text-lg font-medium text-[#222B45] dark:text-white mb-4">Content & Features</h2>
                           <motion.div
-                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative"
+                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 relative"
                             variants={gridLayoutVariants}
                             initial="hidden"
                             animate="visible"
                           >
                             <AnimatePresence mode="popLayout">
                               {visibleTabs
-                                .filter(tab => ['features', 'data'].includes(tab.id))
+                                .filter(tab => ['features', 'data', 'notifications', 'update'].includes(tab.id))
                                 .map((tab) => (
                                   <motion.div 
                                     key={tab.id} 
@@ -500,9 +492,7 @@ export const ControlPanel = ({ open, onClose }: ControlPanelProps) => {
                             </AnimatePresence>
                           </motion.div>
                         </div>
-                        
                         {/* AI Providers Section - Removed */}
-                        
                         {/* System & Advanced Section - Already Removed */}
                       </div>
                     )}

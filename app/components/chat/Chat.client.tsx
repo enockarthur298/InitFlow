@@ -30,6 +30,7 @@ import { supabaseConnection } from '~/lib/stores/supabase';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { useAuth } from '@clerk/remix';
 import { SignInButton, SignUpButton } from '@clerk/remix';
+import { useNavigate } from '@remix-run/react';
 
 const toastAnimation = cssTransition({
   enter: 'animated fadeInRight',
@@ -126,8 +127,11 @@ export const ChatImpl = memo(
     importChat,
   }) => {
     renderLogger.trace('ChatImpl');
-    const { isSignedIn } = useAuth(); // Get authentication status
-    const [showAuthDialog, setShowAuthDialog] = useState(false); // State for dialog
+    const { isSignedIn, userId } = useAuth(); // Get authentication status
+    const [showAuthDialog, setShowAuthDialog] = useState(false); // State for auth dialog
+    const [showPricingDialog, setShowPricingDialog] = useState(false); // State for pricing dialog
+    const [hasSubscription, setHasSubscription] = useState(false); // State for subscription status
+    const navigate = useNavigate(); // For navigation to pricing page
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
@@ -138,7 +142,7 @@ export const ChatImpl = memo(
     const files = useStore(workbenchStore.files);
     const actionAlert = useStore(workbenchStore.alert);
     const deployAlert = useStore(workbenchStore.deployAlert);
-    const supabaseConn = useStore(supabaseConnection); // Add this line to get Supabase connection
+    const supabaseConn = useStore(supabaseConnection);
     const selectedProject = supabaseConn.stats?.projects?.find(
       (project) => project.id === supabaseConn.selectedProjectId,
     );
@@ -222,10 +226,44 @@ export const ChatImpl = memo(
       initialMessages,
       initialInput: Cookies.get(PROMPT_COOKIE_KEY) || '',
     });
+
+    // Check if user has an active subscription
+    const checkSubscription = useCallback(async () => {
+      if (!isSignedIn || !userId) return false;
+      
+      try {
+        // Replace with your actual subscription check API endpoint
+        const response = await fetch('/api/check-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId }),
+        });
+        
+        if (!response.ok) {
+          return false;
+        }
+        
+        const data = await response.json();
+        return data.hasActiveSubscription;
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        return false;
+      }
+    }, [isSignedIn, userId]);
+
+    // Check subscription status when user signs in
+    useEffect(() => {
+      if (isSignedIn) {
+        checkSubscription().then(setHasSubscription);
+      } else {
+        setHasSubscription(false);
+      }
+    }, [isSignedIn, checkSubscription]);
+
     useEffect(() => {
       const prompt = searchParams.get('prompt');
-
-      // console.log(prompt, searchParams, model, provider);
 
       if (prompt) {
         setSearchParams({});
@@ -311,11 +349,21 @@ export const ChatImpl = memo(
     };
 
     const sendMessage = async (_event: React.UIEvent, messageInput?: string) => {
-      // --- FIX: Check authentication before proceeding ---
+      // Step 1: Check if user is authenticated
       if (!isSignedIn) {
         setShowAuthDialog(true);
         return;
       }
+      
+      // Step 2: Check if user has an active subscription
+      const subscriptionStatus = await checkSubscription();
+      setHasSubscription(subscriptionStatus);
+      
+      if (!subscriptionStatus) {
+        setShowPricingDialog(true);
+        return;
+      }
+
       const messageContent = messageInput || input;
 
       if (!messageContent?.trim()) {
@@ -520,6 +568,12 @@ export const ChatImpl = memo(
       Cookies.set('selectedProvider', newProvider.name, { expires: 30 });
     };
 
+    // Navigate to pricing page
+    const navigateToPricing = () => {
+      navigate('/pricing');
+      setShowPricingDialog(false);
+    };
+
     return (
       <>
         <BaseChat
@@ -640,72 +694,82 @@ export const ChatImpl = memo(
             </RadixDialog.Content>
           </RadixDialog.Portal>
         </RadixDialog.Root>
+
+        {/* Subscription Required Dialog */}
+        <RadixDialog.Root open={showPricingDialog} onOpenChange={setShowPricingDialog}>
+          <RadixDialog.Portal>
+            <RadixDialog.Overlay className="fixed inset-0 bg-[#1A1D2D]/30 backdrop-blur-sm z-50 transition-all duration-200" />
+            <RadixDialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-md bg-gradient-to-b from-[#F5F7FA] to-[#E4E7EB] dark:from-[#1A1D2D] dark:to-[#141625] rounded-xl border border-[#7B61FF]/20 shadow-2xl shadow-[#7B61FF]/5 z-50">
+              <div className="relative p-6">
+                {/* Header */}
+                <div className="text-center mb-8">
+                  <div className="mx-auto w-12 h-12 mb-4 rounded-full bg-bolt-primary-button/10 flex items-center justify-center">
+                    <div className="i-ph:crown text-2xl text-bolt-primary-button" />
+                  </div>
+                  <RadixDialog.Title className="text-xl font-semibold text-bolt-elements-textPrimary mb-2">
+                    Subscription Required
+                  </RadixDialog.Title>
+                  <RadixDialog.Description className="text-sm text-bolt-elements-textSecondary">
+                    You need an active subscription to use this feature. Choose a plan to continue.
+                  </RadixDialog.Description>
+                </div>
+
+                {/* Pricing Information */}
+                <div className="mb-6 p-4 bg-bolt-elements-background-depth-1 rounded-lg">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="font-medium text-bolt-elements-textPrimary">Pro Plan</span>
+                    <span className="font-bold text-bolt-primary-button">$19.99/month</span>
+                  </div>
+                  <ul className="space-y-2 text-sm text-bolt-elements-textSecondary">
+                    <li className="flex items-center">
+                      <div className="i-ph:check-circle-fill text-bolt-elements-icon-success mr-2" />
+                      Unlimited AI chat conversations
+                    </li>
+                    <li className="flex items-center">
+                      <div className="i-ph:check-circle-fill text-bolt-elements-icon-success mr-2" />
+                      Access to all AI models
+                    </li>
+                    <li className="flex items-center">
+                      <div className="i-ph:check-circle-fill text-bolt-elements-icon-success mr-2" />
+                      Priority support
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Buttons */}
+                <div className="space-y-3">
+                  <button
+                    className="w-full px-4 py-3 rounded-lg bg-bolt-primary-button text-bolt-primary-button-foreground hover:bg-bolt-primary-button/90 transition-colors duration-200 flex items-center justify-center gap-2 font-medium"
+                    onClick={navigateToPricing}
+                  >
+                    <div className="i-ph:lightning text-xl" />
+                    View Pricing Plans
+                  </button>
+                  
+                  <RadixDialog.Close asChild>
+                    <button
+                      className="w-full px-4 py-3 rounded-lg border border-bolt-elements-borderColor bg-transparent hover:bg-bolt-elements-background-hover text-bolt-elements-textPrimary transition-colors duration-200 flex items-center justify-center gap-2 font-medium"
+                    >
+                      <div className="i-ph:arrow-left text-xl" />
+                      Return to Chat
+                    </button>
+                  </RadixDialog.Close>
+                </div>
+
+                {/* Close button */}
+                <RadixDialog.Close asChild>
+                  <button
+                    className="absolute top-4 right-4 p-2 rounded-full text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary hover:bg-bolt-elements-background-hover transition-colors duration-200"
+                    aria-label="Close"
+                  >
+                    <div className="i-ph:x text-xl" />
+                  </button>
+                </RadixDialog.Close>
+              </div>
+            </RadixDialog.Content>
+          </RadixDialog.Portal>
+        </RadixDialog.Root>
       </>
     );
   },
 );
-
-// Create a new handleSubmit that wraps the original one
-const handleSubmit = (
-  e: React.FormEvent<HTMLFormElement>,
-  chatRequestOptions?: {
-    options?: {
-      body: Record<string, any>;
-    };
-    data?: Record<string, string>;
-  },
-) => {
-  e.preventDefault(); // Prevent default form submission
-  if (!isSignedIn) {
-    setShowAuthDialog(true); // Show dialog if not signed in
-    return;
-  }
-  // If signed in, call the original handleSubmit from useChat
-  originalHandleSubmit(e, chatRequestOptions);
-  // Clear files after successful submission (if needed)
-  setUploadedFiles([]);
-  setImageDataList([]);
-};
-
-// Modify the sendMessage function (used by BaseChat's SendButton)
-const sendMessage = (event: React.UIEvent, messageInput?: string) => {
-  if (!isSignedIn) {
-    setShowAuthDialog(true); // Show dialog if not signed in
-    return;
-  }
-
-  // Manually construct the message object if messageInput is provided
-  const messageToSend = messageInput ?? input;
-  if (!messageToSend.trim() && uploadedFiles.length === 0 && imageDataList.length === 0) {
-     toast.error('Please enter a message or upload an image.');
-     return;
-  }
-
-  const newMessage: Message = {
-    id: generateId(),
-    role: 'user',
-    content: messageToSend,
-    data: {
-      artifacts: filesToArtifacts(uploadedFiles, imageDataList),
-    },
-  };
-
-  // Use append to send the message
-  append(newMessage, {
-     data: {
-       provider: provider?.name || DEFAULT_PROVIDER.name,
-       model: model || DEFAULT_MODEL,
-       promptId: promptId,
-       context: JSON.stringify(contextAnnotations),
-       supabase_connection: JSON.stringify(supabaseConnection.get()),
-     },
-  });
-
-
-  // Clear input and files after sending
-  setInput('');
-  setUploadedFiles([]);
-  setImageDataList([]);
-  // ... potentially other cleanup ...
-};
-

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pricing</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      margin: 0;
+      padding: 0;
+      background-color: #f9fafb;
+      color: #111827;
+    }
+    .page-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      text-align: center;
+    }
+    .pricing-card {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 32px;
+      margin-top: 32px;
+    }
+    .price {
+      font-size: 48px;
+      font-weight: 700;
+      margin: 16px 0;
+    }
+    .price span {
+      font-size: 20px;
+      opacity: 0.8;
+    }
+    .features {
+      text-align: left;
+      margin: 24px 0;
+      padding-left: 20px;
+    }
+    .features li {
+      margin-bottom: 8px;
+    }
+    .subscribe-btn {
+      display: inline-block;
+      background: linear-gradient(to right, #3b82f6, #4f46e5);
+      color: white;
+      font-weight: 600;
+      padding: 12px 24px;
+      border-radius: 6px;
+      text-decoration: none;
+      margin-top: 16px;
+      transition: all 0.2s ease;
+    }
+    .subscribe-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(79, 70, 229, 0.2);
+    }
+    footer {
+      margin-top: 40px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+  </style>
+  <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+</head>
+<body>
+  <div class="page-container">
+    <h1>Bolt DIY Pro Plan</h1>
+    <p>Everything you need for professional development</p>
+    
+    <div class="pricing-card">
+      <div class="price">$25<span>/month</span></div>
+      
+      <ul class="features">
+        <li>Unlimited AI Chat Conversations</li>
+        <li>Advanced Code Generation</li>
+        <li>Priority Support</li>
+        <li>Multiple Projects</li>
+        <li>Custom Templates</li>
+        <li>Fast Response Time</li>
+        <li>Access to All AI Models</li>
+        <li>Cloud Workspace Integration</li>
+      </ul>
+      
+      <a href="#" class="subscribe-btn" onclick="openCheckout()">Subscribe Now</a>
+    </div>
+  </div>
+  
+  <footer>
+    <p>Bolt DIY Pro Plan - $25/month subscription includes all premium features</p>
+  </footer>
+
+  <script>
+    Paddle.Environment.set("sandbox");
+    Paddle.Initialize({
+      token: "test_074e3c345e9275b92f43152d2c5",
+      eventCallback: function(data) {
+        console.log(data);
+      }
+    });
+    
+    function openCheckout() {
+      Paddle.Checkout.open({
+        items: [
+          {
+            priceId: 'pri_01jtvdfkws8pebpjjm2wsqgbzf',
+            quantity: 1
+          }
+        ],
+        settings: {
+          successUrl: window.location.origin + "/thank-you"
+        }
+      });
+    }
+  </script>
+</body>
+</html>
+  

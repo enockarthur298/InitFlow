@@ -342,7 +342,7 @@ export const Menu = () => {
 
           <div className="flex-1 flex flex-col h-full w-full overflow-hidden">
             {/* Search and action buttons */}
-            <div className="p-4 space-y-3">
+            <div className="p-4 pb-2 space-y-3">
               <div className="flex gap-2">
                 <a
                   href="/"
@@ -377,141 +377,141 @@ export const Menu = () => {
                 />
               </div>
             </div>
-          </div>
-
-          {/* Projects section header */}
-          <div className="flex items-center justify-between text-sm px-5 py-3">
-            <div className="font-medium text-[#2E3A59] dark:text-gray-300">Your Projects</div>
-            {selectionMode && (
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={selectAll} className="text-[#3366FF] hover:text-[#2952CC]">
-                  {selectedItems.length === filteredList.length ? 'Deselect all' : 'Select all'}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleBulkDeleteClick}
-                  disabled={selectedItems.length === 0}
-                  className="bg-red-500 hover:bg-red-600"
-                >
-                  Delete selected
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Project list with improved styling */}
-          <div className="flex-1 overflow-auto px-3 pb-3">
-            {filteredList.length === 0 && (
-              <div className="px-4 py-8 text-center">
-                <div className="i-ph:folder-notch-open-duotone h-12 w-12 mx-auto text-[#8F9BB3] mb-2"></div>
-                <div className="text-[#8F9BB3] dark:text-gray-400 text-sm">
-                  {list.length === 0 ? 'No previous projects' : 'No matches found'}
+          
+            {/* Projects section header */}
+            <div className="flex items-center justify-between text-sm px-5 py-2">
+              <div className="font-medium text-[#2E3A59] dark:text-gray-300">Your Projects</div>
+              {selectionMode && (
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={selectAll} className="text-[#3366FF] hover:text-[#2952CC]">
+                    {selectedItems.length === filteredList.length ? 'Deselect all' : 'Select all'}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBulkDeleteClick}
+                    disabled={selectedItems.length === 0}
+                    className="bg-red-500 hover:bg-red-600"
+                  >
+                    Delete selected
+                  </Button>
                 </div>
-              </div>
-            )}
-            <DialogRoot open={dialogContent !== null}>
-              {binDates(filteredList).map(({ category, items }) => (
-                <div key={category} className="mt-2 first:mt-0 space-y-1">
-                  <div className="text-xs font-medium text-[#8F9BB3] dark:text-gray-400 sticky top-0 z-1 bg-[#F7F9FC] dark:bg-gray-900 px-4 py-2 backdrop-blur-sm">
-                    {category}
-                  </div>
-                  <div className="space-y-1 pr-1">
-                    {items.map((item) => (
-                      <HistoryItem
-                        key={item.id}
-                        item={item}
-                        exportChat={exportChat}
-                        onDelete={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          console.log('Delete triggered for item:', item);
-                          setDialogContentWithLogging({ type: 'delete', item });
-                        }}
-                        onDuplicate={() => handleDuplicate(item.id)}
-                        selectionMode={selectionMode}
-                        isSelected={selectedItems.includes(item.id)}
-                        onToggleSelection={toggleItemSelection}
-                      />
-                    ))}
+              )}
+            </div>
+
+            {/* Project list with improved styling */}
+            <div className="flex-1 overflow-auto px-3 pb-1">
+              {filteredList.length === 0 && (
+                <div className="px-4 py-8 text-center">
+                  <div className="i-ph:folder-notch-open-duotone h-12 w-12 mx-auto text-[#8F9BB3] mb-2"></div>
+                  <div className="text-[#8F9BB3] dark:text-gray-400 text-sm">
+                    {list.length === 0 ? 'No previous projects' : 'No matches found'}
                   </div>
                 </div>
-              ))}
-              
-              {/* Preserving all dialog functionality */}
-              <Dialog onBackdrop={closeDialog} onClose={closeDialog}>
-                {dialogContent?.type === 'delete' && (
-                  <>
-                    <div className="p-6 bg-white dark:bg-gray-900">
-                      <DialogTitle className="text-[#2E3A59] dark:text-white">Delete Project?</DialogTitle>
-                      <DialogDescription className="mt-2 text-[#8F9BB3] dark:text-gray-400">
-                        <p>
-                          You are about to delete{' '}
-                          <span className="font-medium text-[#2E3A59] dark:text-white">
-                            {dialogContent.item.description}
-                          </span>
-                        </p>
-                        <p className="mt-2">Are you sure you want to delete this project?</p>
-                      </DialogDescription>
+              )}
+              <DialogRoot open={dialogContent !== null}>
+                {binDates(filteredList).map(({ category, items }) => (
+                  <div key={category} className="mt-2 first:mt-0 space-y-1">
+                    <div className="text-xs font-medium text-[#8F9BB3] dark:text-gray-400 sticky top-0 z-1 bg-[#F7F9FC] dark:bg-gray-900 px-4 py-2 backdrop-blur-sm">
+                      {category}
                     </div>
-                    <div className="flex justify-end gap-3 px-6 py-4 bg-[#F7F9FC] dark:bg-gray-800 border-t border-[#E4E9F2] dark:border-gray-700">
-                      <DialogButton type="secondary" onClick={closeDialog}>
-                        Cancel
-                      </DialogButton>
-                      <DialogButton
-                        type="danger"
-                        onClick={(event) => {
-                          console.log('Dialog delete button clicked for item:', dialogContent.item);
-                          deleteItem(event, dialogContent.item);
-                          closeDialog();
-                        }}
-                      >
-                        Delete
-                      </DialogButton>
+                    <div className="space-y-1 pr-1">
+                      {items.map((item) => (
+                        <HistoryItem
+                          key={item.id}
+                          item={item}
+                          exportChat={exportChat}
+                          onDelete={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            console.log('Delete triggered for item:', item);
+                            setDialogContentWithLogging({ type: 'delete', item });
+                          }}
+                          onDuplicate={() => handleDuplicate(item.id)}
+                          selectionMode={selectionMode}
+                          isSelected={selectedItems.includes(item.id)}
+                          onToggleSelection={toggleItemSelection}
+                        />
+                      ))}
                     </div>
-                  </>
-                )}
-                {dialogContent?.type === 'bulkDelete' && (
-                  <>
-                    <div className="p-6 bg-white dark:bg-gray-900">
-                      <DialogTitle className="text-[#2E3A59] dark:text-white">Delete Selected Projects?</DialogTitle>
-                      <DialogDescription className="mt-2 text-[#8F9BB3] dark:text-gray-400">
-                        <p>
-                          You are about to delete {dialogContent.items.length}{' '}
-                          {dialogContent.items.length === 1 ? 'project' : 'projects'}:
-                        </p>
-                        <div className="mt-2 max-h-32 overflow-auto border border-[#E4E9F2] dark:border-gray-700 rounded-md bg-[#F7F9FC] dark:bg-gray-800 p-2">
-                          <ul className="list-disc pl-5 space-y-1">
-                            {dialogContent.items.map((item) => (
-                              <li key={item.id} className="text-sm">
-                                <span className="font-medium text-[#2E3A59] dark:text-white">{item.description}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <p className="mt-3">Are you sure you want to delete these projects?</p>
-                      </DialogDescription>
-                    </div>
-                    <div className="flex justify-end gap-3 px-6 py-4 bg-[#F7F9FC] dark:bg-gray-800 border-t border-[#E4E9F2] dark:border-gray-700">
-                      <DialogButton type="secondary" onClick={closeDialog}>
-                        Cancel
-                      </DialogButton>
-                      <DialogButton
-                        type="danger"
-                        onClick={() => {
-                          const itemsToDeleteNow = [...selectedItems];
-                          console.log('Bulk delete confirmed for', itemsToDeleteNow.length, 'items', itemsToDeleteNow);
-                          deleteSelectedItems(itemsToDeleteNow);
-                          closeDialog();
-                        }}
-                      >
-                        Delete
-                      </DialogButton>
-                    </div>
-                  </>
-                )}
-              </Dialog>
-            </DialogRoot>
+                  </div>
+                ))}
+                
+                {/* Preserving all dialog functionality */}
+                <Dialog onBackdrop={closeDialog} onClose={closeDialog}>
+                  {dialogContent?.type === 'delete' && (
+                    <>
+                      <div className="p-6 bg-white dark:bg-gray-900">
+                        <DialogTitle className="text-[#2E3A59] dark:text-white">Delete Project?</DialogTitle>
+                        <DialogDescription className="mt-2 text-[#8F9BB3] dark:text-gray-400">
+                          <p>
+                            You are about to delete{' '}
+                            <span className="font-medium text-[#2E3A59] dark:text-white">
+                              {dialogContent.item.description}
+                            </span>
+                          </p>
+                          <p className="mt-2">Are you sure you want to delete this project?</p>
+                        </DialogDescription>
+                      </div>
+                      <div className="flex justify-end gap-3 px-6 py-4 bg-[#F7F9FC] dark:bg-gray-800 border-t border-[#E4E9F2] dark:border-gray-700">
+                        <DialogButton type="secondary" onClick={closeDialog}>
+                          Cancel
+                        </DialogButton>
+                        <DialogButton
+                          type="danger"
+                          onClick={(event) => {
+                            console.log('Dialog delete button clicked for item:', dialogContent.item);
+                            deleteItem(event, dialogContent.item);
+                            closeDialog();
+                          }}
+                        >
+                          Delete
+                        </DialogButton>
+                      </div>
+                    </>
+                  )}
+                  {dialogContent?.type === 'bulkDelete' && (
+                    <>
+                      <div className="p-6 bg-white dark:bg-gray-900">
+                        <DialogTitle className="text-[#2E3A59] dark:text-white">Delete Selected Projects?</DialogTitle>
+                        <DialogDescription className="mt-2 text-[#8F9BB3] dark:text-gray-400">
+                          <p>
+                            You are about to delete {dialogContent.items.length}{' '}
+                            {dialogContent.items.length === 1 ? 'project' : 'projects'}:
+                          </p>
+                          <div className="mt-2 max-h-32 overflow-auto border border-[#E4E9F2] dark:border-gray-700 rounded-md bg-[#F7F9FC] dark:bg-gray-800 p-2">
+                            <ul className="list-disc pl-5 space-y-1">
+                              {dialogContent.items.map((item) => (
+                                <li key={item.id} className="text-sm">
+                                  <span className="font-medium text-[#2E3A59] dark:text-white">{item.description}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <p className="mt-3">Are you sure you want to delete these projects?</p>
+                        </DialogDescription>
+                      </div>
+                      <div className="flex justify-end gap-3 px-6 py-4 bg-[#F7F9FC] dark:bg-gray-800 border-t border-[#E4E9F2] dark:border-gray-700">
+                        <DialogButton type="secondary" onClick={closeDialog}>
+                          Cancel
+                        </DialogButton>
+                        <DialogButton
+                          type="danger"
+                          onClick={() => {
+                            const itemsToDeleteNow = [...selectedItems];
+                            console.log('Bulk delete confirmed for', itemsToDeleteNow.length, 'items', itemsToDeleteNow);
+                            deleteSelectedItems(itemsToDeleteNow);
+                            closeDialog();
+                          }}
+                        >
+                          Delete
+                        </DialogButton>
+                      </div>
+                    </>
+                  )}
+                </Dialog>
+              </DialogRoot>
+            </div>
           </div>
 
           {/* Footer with settings and theme toggle */}

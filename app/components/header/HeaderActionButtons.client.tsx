@@ -151,22 +151,7 @@ export function HeaderActionButtons({}: HeaderActionButtonsProps) {
               <span className="mx-auto font-medium">{!vercelConn.user ? 'No Vercel Account Connected' : 'Publish to Vercel'}</span>
               {vercelConn.user && <VercelDeploymentLink />}
             </Button>
-            <Button
-              active={false}
-              disabled
-              className="flex items-center w-full rounded-md px-4 py-2 text-sm text-[#8F9BB3] dark:text-gray-500 gap-2"
-            >
-              <span className="sr-only">Coming Soon</span>
-              <img
-                className="w-5 h-5 opacity-70"
-                height="24"
-                width="24"
-                crossOrigin="anonymous"
-                src="https://cdn.simpleicons.org/cloudflare"
-                alt="cloudflare"
-              />
-              <span className="mx-auto">Deploy to Cloudflare (Coming Soon)</span>
-            </Button>
+            {/* Cloudflare option removed */}
           </div>
         )}
       </div>

@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react';
-import type { LinksFunction } from '@remix-run/cloudflare';
+import type { LinksFunction, LoaderFunction } from '@remix-run/cloudflare';
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from '@remix-run/react';
 import tailwindReset from '@unocss/reset/tailwind-compat.css?url';
 import { themeStore } from './lib/stores/theme';
@@ -20,7 +20,7 @@ import 'virtual:uno.css';
 
 // Import ClerkApp
 import { ClerkApp } from "@clerk/remix";
-
+import { logStore } from './lib/stores/logs';
 
 export const links: LinksFunction = () => [
   {
@@ -60,9 +60,9 @@ const inlineThemeCode = stripIndents`
     document.querySelector('html')?.setAttribute('data-theme', theme);
   }
 `;
+
 // Export as the root route loader
 export const loader: LoaderFunction = (args) => rootAuthLoader(args);
-
 
 export const Head = createHead(() => (
   <>
@@ -70,6 +70,7 @@ export const Head = createHead(() => (
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <Meta />
     <Links />
+    {/* Removed Paddle script from here */}
     <script dangerouslySetInnerHTML={{ __html: inlineThemeCode }} />
   </>
 ));
@@ -89,8 +90,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     </>
   );
 }
-
-import { logStore } from './lib/stores/logs';
 
 export function App() {
   const theme = useStore(themeStore);

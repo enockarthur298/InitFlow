@@ -27,6 +27,7 @@ export const TabTile: React.FC<TabTileProps> = ({
   className,
   children,
 }: TabTileProps) => {
+  // Update this line to not hide the billing tab
   const hiddenTabs = ['features', 'local-providers', 'service-status', 'debug', 'tab-management'];
   
   if (hiddenTabs.includes(tab.id)) {
