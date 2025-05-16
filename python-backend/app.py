@@ -19,11 +19,12 @@ supabase = create_client(supabase_url, supabase_key)
 
 app = Flask(__name__)
 # Enable CORS for all routes
+# Update the CORS configuration to allow all routes and methods
 CORS(app, resources={
-    r"/api/*": {
+    r"/*": {
         "origins": "*",
-        "methods": ["POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "X-Paddle-Signature"]
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "X-Paddle-Signature", "Authorization"]
     }
 })
 
@@ -148,6 +149,51 @@ def handle_subscription_created(data):
             else:
                 logger.error(f"Failed to save subscription item to Supabase: {item_result}")
         
+        # Try to find and update the user with this customer ID
+        try:
+            # Get customer details from Paddle API
+            customer = paddle.customers.get(customer_id)
+            email = customer.email
+            
+            # First try to find user by email in our database
+            user_result = supabase.table('users').select('*').eq('email', email).execute()
+            
+            if hasattr(user_result, 'data') and user_result.data and len(user_result.data) > 0:
+                user = user_result.data[0]
+                clerk_user_id = user.get('clerk_user_id')
+                
+                # Update user with Paddle customer ID and subscription status
+                supabase.table('users').update({
+                    'paddle_customer_id': customer_id,
+                    'has_subscription': True,
+                    'email': email,  # Ensure email is set
+                    'updated_at': datetime.utcnow().isoformat()
+                }).eq('clerk_user_id', clerk_user_id).execute()
+                
+                logger.info(f"Updated user {clerk_user_id} with customer ID {customer_id} and active subscription")
+            else:
+                # If no user found by email, try to find the most recently active user
+                # This is a fallback for when the email doesn't match
+                recent_users = supabase.table('users').select('*').order('updated_at', desc=True).limit(5).execute()
+                
+                if hasattr(recent_users, 'data') and recent_users.data and len(recent_users.data) > 0:
+                    # Update the most recently active user
+                    recent_user = recent_users.data[0]
+                    clerk_user_id = recent_user.get('clerk_user_id')
+                    
+                    supabase.table('users').update({
+                        'paddle_customer_id': customer_id,
+                        'has_subscription': True,
+                        'email': email,  # Set the email from Paddle
+                        'updated_at': datetime.utcnow().isoformat()
+                    }).eq('clerk_user_id', clerk_user_id).execute()
+                    
+                    logger.info(f"Linked customer {customer_id} to most recent user {clerk_user_id}")
+                else:
+                    logger.error(f"No users found to link with customer {customer_id}")
+        except Exception as e:
+            logger.error(f"Error linking customer to user: {str(e)}")
+        
     except Exception as e:
         logger.error(f"Error handling subscription.created: {str(e)}")
 
@@ -255,6 +301,10 @@ def handle_subscription_activated(data):
         try:
             # Get full subscription details from Paddle API
             subscription = paddle.subscriptions.get(subscription_id)
+            customer = paddle.customers.get(customer_id)
+            
+            # Get customer email from Paddle
+            customer_email = customer.email if customer else None
             
             # Important details to track
             status = subscription.status
@@ -280,6 +330,52 @@ def handle_subscription_activated(data):
                 logger.info(f"Subscription {subscription_id} activated in Supabase")
             else:
                 logger.error(f"Failed to update activated subscription in Supabase: {result}")
+            
+            # Update the user's subscription status
+            try:
+                # First try to find user by email
+                user_result = None
+                if customer_email:
+                    user_result = supabase.table('users').select('*').eq('email', customer_email).execute()
+                
+                # If no user found by email, try to find by customer_id (in case it was set earlier)
+                if not user_result or not user_result.data:
+                    user_result = supabase.table('users').select('*').eq('paddle_customer_id', customer_id).execute()
+                
+                if hasattr(user_result, 'data') and user_result.data and len(user_result.data) > 0:
+                    user = user_result.data[0]
+                    clerk_user_id = user.get('clerk_user_id')
+                    
+                    # Update user with customer ID and subscription status
+                    supabase.table('users').update({
+                        'paddle_customer_id': customer_id,
+                        'has_subscription': True,
+                        'email': customer_email or user.get('email'),
+                        'updated_at': datetime.utcnow().isoformat()
+                    }).eq('clerk_user_id', clerk_user_id).execute()
+                    
+                    logger.info(f"Updated user {clerk_user_id} with customer ID {customer_id} and active subscription")
+                else:
+                    # If no user found by email or customer_id, try to find the most recently active user
+                    recent_users = supabase.table('users').select('*').order('updated_at', desc=True).limit(5).execute()
+                    
+                    if hasattr(recent_users, 'data') and recent_users.data and len(recent_users.data) > 0:
+                        # Update the most recently active user
+                        recent_user = recent_users.data[0]
+                        clerk_user_id = recent_user.get('clerk_user_id')
+                        
+                        supabase.table('users').update({
+                            'paddle_customer_id': customer_id,
+                            'has_subscription': True,
+                            'email': customer_email or recent_user.get('email'),
+                            'updated_at': datetime.utcnow().isoformat()
+                        }).eq('clerk_user_id', clerk_user_id).execute()
+                        
+                        logger.info(f"Linked customer {customer_id} to most recent user {clerk_user_id}")
+                    else:
+                        logger.error(f"No users found to link with customer {customer_id}")
+            except Exception as user_error:
+                logger.error(f"Error updating user subscription status: {str(user_error)}")
             
         except Exception as api_error:
             logger.error(f"Error retrieving subscription details: {str(api_error)}")
@@ -390,5 +486,204 @@ def get_customer_subscription(customer_id):
         logger.error(f"Error getting customer subscription: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/users/register', methods=['POST'])
+def register_user():
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        email = data.get('email')
+        
+        logger.info(f"Registering user: {user_id}, email: {email}")
+        
+        if not user_id:
+            logger.error("No user ID provided in registration")
+            return jsonify({"error": "User ID is required"}), 400
+            
+        # Check if user already exists
+        existing_user = supabase.table('users').select('*').eq('clerk_user_id', user_id).execute()
+        
+        if hasattr(existing_user, 'data') and existing_user.data and len(existing_user.data) > 0:
+            # User exists, update their information if needed
+            user = existing_user.data[0]
+            logger.info(f"User {user_id} already exists, checking for updates")
+            
+            # Only update email if provided and different
+            if email and email != user.get('email'):
+                update_result = supabase.table('users').update({
+                    'email': email,
+                    'updated_at': datetime.now().isoformat()
+                }).eq('clerk_user_id', user_id).execute()
+                
+                logger.info(f"Updated email for existing user {user_id}")
+            
+            # Always re-check Paddle subscription status if paddle_customer_id is present
+            paddle_customer_id = user.get('paddle_customer_id')
+            has_subscription = user.get('has_subscription', False)
+            if paddle_customer_id:
+                try:
+                    subscription_result = supabase.table('subscriptions')\
+                        .select('*')\
+                        .eq('customer_id', paddle_customer_id)\
+                        .eq('status', 'active')\
+                        .execute()
+                    if hasattr(subscription_result, 'data') and subscription_result.data:
+                        # Update the user's subscription status if needed
+                        if not has_subscription:
+                            supabase.table('users')\
+                                .update({'has_subscription': True})\
+                                .eq('clerk_user_id', user_id)\
+                                .execute()
+                        has_subscription = True
+                except Exception as sub_error:
+                    logger.error(f"Error checking subscriptions table (register): {str(sub_error)}")
+            
+            return jsonify({
+                "success": True,
+                "message": "User already registered",
+                "has_subscription": has_subscription
+            })
+        
+        # User doesn't exist, create new user
+        logger.info(f"Creating new user: {user_id}")
+        user_data = {
+            'clerk_user_id': user_id,
+            'email': email,
+            'has_subscription': False,
+            'created_at': datetime.now().isoformat()
+        }
+        
+        result = supabase.table('users').insert(user_data).execute()
+        
+        if hasattr(result, 'data') and result.data:
+            logger.info(f"User {user_id} registered successfully")
+            return jsonify({
+                "success": True,
+                "message": "User registered successfully",
+                "has_subscription": False
+            })
+        else:
+            logger.error(f"Failed to register user: {result}")
+            return jsonify({"error": "Failed to register user"}), 500
+            
+    except Exception as e:
+        logger.error(f"Error registering user: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/check-subscription', methods=['GET'])
+def check_subscription():
+    try:
+        # Get the user ID from the request
+        user_id = request.args.get('user_id')
+        
+        if not user_id:
+            logger.error("No user ID provided in subscription check")
+            return jsonify({"error": "User ID is required", "has_active_subscription": False}), 400
+        
+        logger.info(f"Checking subscription for user: {user_id}")
+        
+        # First, check if the user exists in our database
+        try:
+            user_result = supabase.table('users').select('*').eq('clerk_user_id', user_id).execute()
+            
+            # If user doesn't exist, register them with no subscription
+            if not hasattr(user_result, 'data') or not user_result.data:
+                logger.info(f"User {user_id} not found in database, registering")
+                user_data = {
+                    'clerk_user_id': user_id,
+                    'has_subscription': False,
+                    'created_at': datetime.now().isoformat()
+                }
+                supabase.table('users').insert(user_data).execute()
+                return jsonify({"has_active_subscription": False, "subscriptions": []}), 200
+            
+            user = user_result.data[0]
+            logger.info(f"Found user: {user}")
+            
+            # If the user has a Paddle customer ID, check their subscription status
+            paddle_customer_id = user.get('paddle_customer_id')
+            if paddle_customer_id:
+                try:
+                    # First check Paddle API directly
+                    try:
+                        customer = paddle.customers.get(paddle_customer_id)
+                        if customer:
+                            # Get all subscriptions for this customer
+                            subscriptions = paddle.subscriptions.list({"customer_id": paddle_customer_id})
+                            active_subs = [sub for sub in subscriptions.data if sub.status == 'active']
+                            
+                            if active_subs:
+                                # Update the user's subscription status
+                                supabase.table('users').update({
+                                    'has_subscription': True,
+                                    'updated_at': datetime.utcnow().isoformat()
+                                }).eq('clerk_user_id', user_id).execute()
+                                
+                                logger.info(f"User {user_id} has active Paddle subscriptions")
+                                return jsonify({
+                                    "has_active_subscription": True,
+                                    "subscriptions": [s.id for s in active_subs]
+                                }), 200
+                    except Exception as paddle_error:
+                        logger.error(f"Error checking Paddle API: {str(paddle_error)}")
+                    
+                    # Fallback to checking Supabase
+                    subscription_result = supabase.table('subscriptions')\
+                        .select('*')\
+                        .eq('customer_id', paddle_customer_id)\
+                        .eq('status', 'active')\
+                        .execute()
+                    
+                    if hasattr(subscription_result, 'data') and subscription_result.data:
+                        # Update the user's subscription status
+                        supabase.table('users').update({
+                            'has_subscription': True,
+                            'updated_at': datetime.utcnow().isoformat()
+                        }).eq('clerk_user_id', user_id).execute()
+                        
+                        logger.info(f"User {user_id} has active subscriptions in Supabase")
+                        return jsonify({
+                            "has_active_subscription": True,
+                            "subscriptions": subscription_result.data
+                        }), 200
+                except Exception as sub_error:
+                    logger.error(f"Error checking subscriptions: {str(sub_error)}")
+            
+            # If we get here, ensure subscription is marked as false
+            if user.get('has_subscription'):
+                supabase.table('users').update({
+                    'has_subscription': False,
+                    'updated_at': datetime.utcnow().isoformat()
+                }).eq('clerk_user_id', user_id).execute()
+            
+            logger.info(f"User {user_id} has no active subscriptions")
+            return jsonify({
+                "has_active_subscription": False,
+                "subscriptions": []
+            }), 200
+            
+        except Exception as db_error:
+            logger.error(f"Database error during subscription check: {str(db_error)}")
+            return jsonify({
+                "has_active_subscription": False,
+                "subscriptions": [],
+                "error_details": "Database connection error"
+            }), 200
+            
+    except Exception as e:
+        logger.error(f"Error checking subscription: {str(e)}")
+        return jsonify({
+            "has_active_subscription": False,
+            "subscriptions": [],
+            "error_details": str(e)
+        }), 500
+        # Return a 200 response with error details instead of 500
+        # This prevents the frontend from breaking
+        return jsonify({
+            "has_active_subscription": False,
+            "subscriptions": [],
+            "error": str(e)
+        }), 200
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(getenv('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)

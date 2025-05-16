@@ -29,7 +29,7 @@ export default function ThankYouPage() {
               onClick={() => navigate('/')}
               className="w-full px-4 py-3 bg-gradient-to-r from-[#3366FF] to-[#7B61FF] text-white rounded-md hover:opacity-90 transition-opacity"
             >
-              Go to Dashboard
+              Get Started
             </button>
             
             <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">

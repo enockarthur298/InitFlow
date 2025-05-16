@@ -31,6 +31,7 @@ import * as RadixDialog from '@radix-ui/react-dialog';
 import { useAuth } from '@clerk/remix';
 import { SignInButton, SignUpButton } from '@clerk/remix';
 import { useNavigate } from '@remix-run/react';
+import { SubscriptionDialog } from './SubscriptionDialog';
 
 const toastAnimation = cssTransition({
   enter: 'animated fadeInRight',
@@ -131,6 +132,7 @@ export const ChatImpl = memo(
     const [showAuthDialog, setShowAuthDialog] = useState(false); // State for auth dialog
     const [showPricingDialog, setShowPricingDialog] = useState(false); // State for pricing dialog
     const [hasSubscription, setHasSubscription] = useState(false); // State for subscription status
+    const [subscriptionError, setSubscriptionError] = useState<string | null>(null); // Subscription error state
     const navigate = useNavigate(); // For navigation to pricing page
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -228,39 +230,176 @@ export const ChatImpl = memo(
     });
 
     // Check if user has an active subscription
-    const checkSubscription = useCallback(async () => {
-      if (!isSignedIn || !userId) return false;
-      
+    // Update the checkSubscription function to use userId from useAuth
+    // Unified subscription check with correct type and error handling
+    const checkSubscription = async (userId: string | undefined): Promise<boolean> => {
+      if (!userId) return false;
       try {
-        // Replace with your actual subscription check API endpoint
-        const response = await fetch('/api/check-subscription', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId }),
-        });
-        
+        const response = await fetch(`/api/check-subscription?user_id=${userId}`);
         if (!response.ok) {
+          setSubscriptionError('Subscription check failed: ' + response.statusText);
           return false;
         }
-        
-        const data = await response.json();
-        return data.hasActiveSubscription;
+        const data = await response.json() as { has_active_subscription: boolean, subscriptions?: any[], error?: string };
+        if (data.error) {
+          setSubscriptionError(data.error);
+        } else {
+          setSubscriptionError(null);
+        }
+        return data.has_active_subscription;
       } catch (error) {
+        setSubscriptionError('Error checking subscription. Please try again.');
         console.error('Error checking subscription:', error);
         return false;
       }
+    };
+
+    
+    // Add this useEffect to register the user with Supabase after authentication
+    useEffect(() => {
+      const registerUserWithSupabase = async () => {
+        if (isSignedIn && userId) {
+          try {
+            // Get user email if available - with error handling
+            let email = '';
+            try {
+              const response = await fetch('/api/users/me');
+              const userData = await response.json() as { 
+                authenticated?: boolean;
+                userId?: string; 
+                email?: string;
+                firstName?: string;
+                lastName?: string;
+              };
+              
+              if (userData.authenticated) {
+                email = userData.email || '';
+              }
+            } catch (emailError) {
+              console.warn('Could not fetch user email, continuing with registration:', emailError);
+            }
+            
+            // Register user with Supabase
+            const registerResponse = await fetch('/api/users/register', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                user_id: userId,
+                email: email
+              }),
+            });
+            
+            if (registerResponse.ok) {
+              // Always check subscription status after registration
+              const hasActiveSubscription = await checkSubscription(userId);
+              setHasSubscription(hasActiveSubscription);
+            } else {
+              console.error('Failed to register user with Supabase');
+              // Still try to check subscription status
+              const hasActiveSubscription = await checkSubscription(userId);
+              setHasSubscription(hasActiveSubscription);
+            }
+          } catch (error) {
+            setSubscriptionError('Error during user registration process.');
+            console.error('Error registering user with Supabase:', error);
+          }
+        }
+      };
+      registerUserWithSupabase();
+    }, [isSignedIn, userId]);
+    
+    // In the ChatImpl component, update the subscription check
+    useEffect(() => {
+      const checkUserSubscription = async () => {
+        if (!isSignedIn || !userId) {
+          setHasSubscription(false);
+          return;
+        }
+        try {
+          setSubscriptionError(null);
+          const hasActiveSubscription = await checkSubscription(userId);
+          setHasSubscription(hasActiveSubscription);
+        } catch (error) {
+          setSubscriptionError('Unable to verify subscription status.');
+          setHasSubscription(false);
+        }
+      };
+      checkUserSubscription();
     }, [isSignedIn, userId]);
 
-    // Check subscription status when user signs in
+    // State for tracking subscription check status
+    const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
+    
+    // Poll subscription status when dialog is open
     useEffect(() => {
-      if (isSignedIn) {
-        checkSubscription().then(setHasSubscription);
-      } else {
-        setHasSubscription(false);
-      }
-    }, [isSignedIn, checkSubscription]);
+      if (!showPricingDialog || !isSignedIn || !userId) return;
+      
+      let polling = true;
+      let pollCount = 0;
+      const maxPolls = 30; // Maximum number of polling attempts (30 * 5s = 2.5 minutes)
+      
+      const poll = async () => {
+        while (polling && pollCount < maxPolls) {
+          setIsCheckingSubscription(true);
+          try {
+            const hasActiveSubscription = await checkSubscription(userId);
+            setIsCheckingSubscription(false);
+            
+            if (hasActiveSubscription) {
+              console.log('Subscription active, enabling chat');
+              setHasSubscription(true);
+              setShowPricingDialog(false);
+              setSubscriptionError(null);
+              break;
+            }
+            
+            // Update the message to show we're checking
+            if (pollCount > 0 && pollCount % 3 === 0) { // Every 15 seconds
+              setSubscriptionError(`Checking subscription status... (${Math.floor(pollCount/12)} minute${Math.floor(pollCount/12) !== 1 ? 's' : ''})`);
+            }
+          } catch (error) {
+            console.error('Error during subscription polling:', error);
+            setIsCheckingSubscription(false);
+          }
+          
+          pollCount++;
+          await new Promise(res => setTimeout(res, 5000)); // 5 second interval
+        }
+        
+        // If we reached max polls without success
+        if (pollCount >= maxPolls && polling) {
+          setSubscriptionError('Subscription check timed out. Please refresh the page or try again later.');
+          setIsCheckingSubscription(false);
+        }
+      };
+      
+      poll();
+      return () => { 
+        polling = false;
+        setIsCheckingSubscription(false);
+      };
+    }, [showPricingDialog, isSignedIn, userId]);
+    
+    // For the data type issue, add type assertion where chatData is used
+    interface ChatData {
+      usage?: {
+        total_tokens?: number;
+        completion_tokens?: number;
+        prompt_tokens?: number;
+      };
+      // Add other properties as needed
+    }
+    // Update where chatData is used
+    const typedChatData = chatData as ChatData;
+
+    // Show subscription error if exists
+    {subscriptionError && (
+      <div className="text-red-500 mb-2">
+        {subscriptionError}
+      </div>
+    )}
 
     useEffect(() => {
       const prompt = searchParams.get('prompt');
@@ -348,30 +487,60 @@ export const ChatImpl = memo(
       setChatStarted(true);
     };
 
+    // Update the sendMessage function to properly handle auth and subscription
     const sendMessage = async (_event: React.UIEvent, messageInput?: string) => {
+      const messageContent = messageInput || input;
+    
+      if (!messageContent?.trim()) {
+        return;
+      }
+    
+      if (isLoading) {
+        abort();
+        return;
+      }
+    
       // Step 1: Check if user is authenticated
       if (!isSignedIn) {
+        // Show auth dialog if not signed in
         setShowAuthDialog(true);
         return;
       }
       
       // Step 2: Check if user has an active subscription
-      const subscriptionStatus = await checkSubscription();
-      setHasSubscription(subscriptionStatus);
-      
-      if (!subscriptionStatus) {
+      // Only check subscription if user is signed in
+      if (isSignedIn) {
+        // If we already know the user doesn't have a subscription, navigate to pricing page
+        if (!hasSubscription) {
+          navigate('/pricing');
+
+
+
+
+          return;
+        }
+        
+        // Double-check subscription status only when needed
+        try {
+          const subscriptionStatus = await checkSubscription(userId);
+          setHasSubscription(subscriptionStatus);
+          
+          if (!subscriptionStatus) {
+            console.log('Subscription check returned false, showing pricing dialog');
+            setShowPricingDialog(true);
+            return;
+          }
+        } catch (error) {
+          console.error('Error checking subscription:', error);
+          setSubscriptionError('Error checking subscription. Please try again.');
+          return;
+        }
+      }
+    
+      // Block prompt submissions if not subscribed
+      if (!hasSubscription) {
         setShowPricingDialog(true);
-        return;
-      }
-
-      const messageContent = messageInput || input;
-
-      if (!messageContent?.trim()) {
-        return;
-      }
-
-      if (isLoading) {
-        abort();
+        setSubscriptionError('You need an active subscription to use this feature.');
         return;
       }
 
@@ -600,44 +769,84 @@ export const ChatImpl = memo(
             onTextareaChange(e);
             debouncedCachePrompt(e);
           }}
-          handleStop={abort}
-          description={description}
-          importChat={importChat}
+          setInput={setInput}
+          stop={stop}
+          reload={reload}
+          append={append}
+          setMessages={setMessages}
+          setData={setData}
           exportChat={exportChat}
-          messages={messages.map((message, i) => {
-            if (message.role === 'user') {
-              return message;
-            }
-
-            return {
-              ...message,
-              content: parsedMessages[i] || '',
-            };
-          })}
-          enhancePrompt={() => {
-            enhancePrompt(
-              input,
-              (input) => {
-                setInput(input);
-                scrollTextArea();
-              },
-              model,
-              provider,
-              apiKeys,
-            );
-          }}
+          importChat={importChat}
+          description={description}
+          chatData={typedChatData}
+          chatStore={chatStore}
+          files={files}
+          actionAlert={actionAlert}
+          deployAlert={deployAlert}
+          supabaseConn={supabaseConn}
+          selectedProject={selectedProject}
+          supabaseAlert={supabaseAlert}
+          TEXTAREA_MAX_HEIGHT={TEXTAREA_MAX_HEIGHT}
           uploadedFiles={uploadedFiles}
           setUploadedFiles={setUploadedFiles}
           imageDataList={imageDataList}
           setImageDataList={setImageDataList}
-          actionAlert={actionAlert}
-          clearAlert={() => workbenchStore.clearAlert()}
-          supabaseAlert={supabaseAlert}
-          clearSupabaseAlert={() => workbenchStore.clearSupabaseAlert()}
-          deployAlert={deployAlert}
-          clearDeployAlert={() => workbenchStore.clearDeployAlert()}
-          data={chatData}
+          showAuthDialog={showAuthDialog}
+          setShowAuthDialog={setShowAuthDialog}
+          showPricingDialog={showPricingDialog}
+          setShowPricingDialog={setShowPricingDialog}
+          hasSubscription={hasSubscription}
+          setHasSubscription={setHasSubscription}
+          subscriptionError={subscriptionError}
+          setSubscriptionError={setSubscriptionError}
+          apiKeys={apiKeys}
+          setApiKeys={setApiKeys}
         />
+        
+        {/* Subscription Dialog - Using RadixDialog directly for more control */}
+        <RadixDialog.Root open={showPricingDialog} onOpenChange={(open) => {
+          console.log('Dialog onOpenChange called with:', open);
+          setShowPricingDialog(open);
+        }}>
+          <RadixDialog.Portal>
+            <RadixDialog.Overlay className="fixed inset-0 bg-black/70 z-[9999]" />
+            <RadixDialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-xl max-w-md w-full z-[10000] border-2 border-blue-500">
+              <RadixDialog.Title className="text-xl font-bold mb-4 text-blue-600">Subscription Required</RadixDialog.Title>
+              <RadixDialog.Description className="mb-6 text-gray-700 text-base">
+                <p className="font-medium">You need an active subscription to send messages. Would you like to subscribe now?</p>
+                
+                {isCheckingSubscription && (
+                  <div className="mt-4 flex items-center text-blue-600">
+                    <div className="animate-spin mr-2 h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                    <span>Checking subscription status...</span>
+                  </div>
+                )}
+                
+                {subscriptionError && !isCheckingSubscription && (
+                  <div className="mt-4 text-amber-600 p-2 bg-amber-50 rounded">
+                    {subscriptionError}
+                  </div>
+                )}
+              </RadixDialog.Description>
+              <div className="flex justify-end gap-4">
+                <button 
+                  onClick={() => setShowPricingDialog(false)}
+                  className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                  disabled={isCheckingSubscription}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={navigateToPricing}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                  disabled={isCheckingSubscription}
+                >
+                  View Pricing
+                </button>
+              </div>
+            </RadixDialog.Content>
+          </RadixDialog.Portal>
+        </RadixDialog.Root>
 
         {/* Authentication Required Dialog */}
         <RadixDialog.Root open={showAuthDialog} onOpenChange={setShowAuthDialog}>
@@ -773,3 +982,29 @@ export const ChatImpl = memo(
     );
   },
 );
+
+// Update the checkSubscription function to handle the improved flow
+const checkSubscription = async (userId: string | undefined) => {
+  if (!userId) return false;
+  
+  try {
+    const response = await fetch(`/api/check-subscription?user_id=${userId}`);
+    
+    if (!response.ok) {
+      console.error('Subscription check failed:', response.statusText);
+      return false;
+    }
+    
+    const data = await response.json() as { has_active_subscription: boolean, subscriptions: any[] };
+    
+    // Log subscription status for debugging
+    console.log('Subscription status:', data.has_active_subscription, 'Subscriptions:', data.subscriptions);
+    
+    return data.has_active_subscription;
+  } catch (error) {
+    console.error('Error checking subscription:', error);
+    // For development purposes only, return true to bypass subscription check
+    // In production, this should be false
+    return false;
+  }
+};

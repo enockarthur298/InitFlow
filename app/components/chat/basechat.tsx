@@ -40,6 +40,8 @@ import type { ActionRunner } from '~/lib/runtime/action-runner';
 import { LOCAL_PROVIDERS } from '~/lib/stores/settings';
 import { SupabaseChatAlert } from '~/components/chat/SupabaseAlert';
 //import { SupabaseConnection } from './SupabaseConnection';
+// Add this to the imports at the top of the file
+import { useAuth } from '@clerk/remix'; 
 
 const TEXTAREA_MIN_HEIGHT = 76;
 
@@ -79,6 +81,30 @@ interface BaseChatProps {
   clearDeployAlert?: () => void;
   data?: JSONValue[] | undefined;
   actionRunner?: ActionRunner;
+  
+  // Added props to match Chat.client.tsx
+  setInput?: (input: string) => void;
+  stop?: () => void;
+  reload?: () => void;
+  append?: (message: any) => void;
+  setMessages?: (messages: Message[]) => void;
+  setData?: (data: any) => void;
+  chatData?: any;
+  chatStore?: any;
+  files?: any;
+  supabaseConn?: any;
+  selectedProject?: any;
+  TEXTAREA_MAX_HEIGHT?: number;
+  showAuthDialog?: boolean;
+  setShowAuthDialog?: (show: boolean) => void;
+  showPricingDialog?: boolean;
+  setShowPricingDialog?: (show: boolean) => void;
+  hasSubscription?: boolean;
+  setHasSubscription?: (has: boolean) => void;
+  subscriptionError?: string | null;
+  setSubscriptionError?: (error: string | null) => void;
+  apiKeys?: Record<string, string>;
+  setApiKeys?: (keys: Record<string, string>) => void;
 }
 
 export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
@@ -131,9 +157,13 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     const [transcript, setTranscript] = useState('');
     const [isModelLoading, setIsModelLoading] = useState<string | undefined>('all');
     const [progressAnnotations, setProgressAnnotations] = useState<ProgressAnnotation[]>([]);
+    const [isLoading, setIsLoading] = useState(false); // Add missing isLoading state
+
     useEffect(() => {
       if (data) {
-        const progressList = data.filter(
+        // Fix the data type issue with proper type assertion
+        const typedData = data as any[];
+        const progressList = typedData.filter(
           (x) => typeof x === 'object' && (x as any).type === 'progress',
         ) as ProgressAnnotation[];
         setProgressAnnotations(progressList);
@@ -246,16 +276,155 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       }
     };
 
-    const handleSendMessage = (event: React.UIEvent, messageInput?: string) => {
+    // Change from '@clerk/remix' to '@clerk/clerk-react'
+
+    // Inside the BaseChat component, add these state variables
+    const { isSignedIn, userId } = useAuth();
+    const [hasSubscription, setHasSubscription] = useState(false);
+    const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
+    const [showPricingDialog, setShowPricingDialog] = useState(false);
+    
+    // Check subscription status when user signs in
+    useEffect(() => {
+      const checkUserSubscription = async () => {
+        if (!isSignedIn || !userId) {
+          console.log('User not signed in, setting hasSubscription to false');
+          setHasSubscription(false);
+          return;
+        }
+        
+        console.log('Checking subscription for user:', userId);
+        setIsCheckingSubscription(true);
+        
+        try {
+          // First register the user to ensure they exist in our database
+          await fetch('/api/users/register', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_id: userId }),
+          });
+          
+          // Now check subscription status
+          const response = await fetch(`/api/check-subscription?user_id=${userId}`);
+          
+          if (!response.ok) {
+            console.error('Subscription check failed:', response.statusText);
+            setHasSubscription(false);
+            return;
+          }
+          
+          const data = await response.json() as { has_active_subscription: boolean };
+          console.log('Subscription check response:', data);
+          setHasSubscription(data.has_active_subscription);
+          
+          // If subscription check failed but we should have one, try again after a delay
+          if (!data.has_active_subscription) {
+            // Try again after 3 seconds in case the webhook is still processing
+            setTimeout(async () => {
+              console.log('Retrying subscription check...');
+              const retryResponse = await fetch(`/api/check-subscription?user_id=${userId}`);
+              if (retryResponse.ok) {
+                const retryData = await retryResponse.json() as { has_active_subscription: boolean };
+                console.log('Retry subscription check response:', retryData);
+                setHasSubscription(retryData.has_active_subscription);
+              }
+            }, 3000);
+          }
+        } catch (error) {
+          console.error('Error checking subscription:', error);
+          // For development purposes, you can set this to true
+          setHasSubscription(false);
+        } finally {
+          setIsCheckingSubscription(false);
+        }
+      };
+      
+      checkUserSubscription();
+    }, [isSignedIn, userId]);
+    
+    // Update the handleSendMessage function to check subscription
+    const handleSendMessage = async (event: React.UIEvent, messageInput?: string) => {
+      // Prevent default behavior
+      event.preventDefault();
+      
+      console.log('handleSendMessage called, isSignedIn:', isSignedIn, 'hasSubscription:', hasSubscription);
+      
+      if (!isSignedIn) {
+        // Show auth dialog if not signed in
+        console.log('User not signed in, showing auth dialog');
+        setShowAuthDialog(true);
+        return;
+      }
+      
+      if (!hasSubscription) {
+        // Show pricing dialog if not subscribed
+        console.log('User has no subscription, showing pricing dialog');
+        // Force dialog to appear by using a direct approach
+        setShowPricingDialog(true);
+        console.log('showPricingDialog set to true');
+        
+        // Force a dialog to appear directly from this component
+        // This is a fallback in case the state change doesn't propagate correctly
+        const dialogElement = document.createElement('div');
+        dialogElement.id = 'emergency-subscription-dialog';
+        dialogElement.style.position = 'fixed';
+        dialogElement.style.top = '0';
+        dialogElement.style.left = '0';
+        dialogElement.style.width = '100%';
+        dialogElement.style.height = '100%';
+        dialogElement.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        dialogElement.style.zIndex = '99999';
+        dialogElement.style.display = 'flex';
+        dialogElement.style.justifyContent = 'center';
+        dialogElement.style.alignItems = 'center';
+        
+        const dialogContent = document.createElement('div');
+        dialogContent.style.backgroundColor = 'white';
+        dialogContent.style.padding = '20px';
+        dialogContent.style.borderRadius = '8px';
+        dialogContent.style.maxWidth = '400px';
+        dialogContent.style.width = '100%';
+        dialogContent.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+        dialogContent.style.border = '2px solid #3b82f6';
+        
+        dialogContent.innerHTML = `
+          <h2 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 1rem; color: #2563eb;">Subscription Required</h2>
+          <p style="margin-bottom: 1.5rem;">You need an active subscription to send messages. Would you like to subscribe now?</p>
+          <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+            <button id="cancel-subscription-dialog" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.25rem; cursor: pointer;">Cancel</button>
+            <button id="view-pricing" style="padding: 0.5rem 1rem; background-color: #2563eb; color: white; border: none; border-radius: 0.25rem; cursor: pointer;">View Pricing</button>
+          </div>
+        `;
+        
+        dialogElement.appendChild(dialogContent);
+        document.body.appendChild(dialogElement);
+        
+        // Add event listeners
+        document.getElementById('cancel-subscription-dialog')?.addEventListener('click', () => {
+          document.body.removeChild(dialogElement);
+          setShowPricingDialog(false);
+        });
+        
+        document.getElementById('view-pricing')?.addEventListener('click', () => {
+          document.body.removeChild(dialogElement);
+          window.location.href = '/pricing';
+        });
+        
+        
+                return;
+      }
+      
+      // Continue with the existing send message logic
       if (sendMessage) {
         sendMessage(event, messageInput);
-
+        
         if (recognition) {
-          recognition.abort(); // Stop current recognition
-          setTranscript(''); // Clear transcript
+          recognition.abort();
+          setTranscript('');
           setIsListening(false);
-
-          // Clear the input by triggering handleInputChange with empty value
+          
           if (handleInputChange) {
             const syntheticEvent = {
               target: { value: '' },
@@ -555,23 +724,17 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                       }}
                       placeholder="What website do you want to build?"
                       translate="no"
-                    />
-                    <ClientOnly>
+                      />
+                   <ClientOnly>
                       {() => (
+                        // In the BaseChat component, update where the SendButton is rendered
                         <SendButton
-                          show={input.length > 0 || isStreaming || uploadedFiles.length > 0}
+                          show={!!input.trim()}
                           isStreaming={isStreaming}
-                          disabled={!providerList || providerList.length === 0}
-                          onClick={(event) => {
-                            if (isStreaming) {
-                              handleStop?.();
-                              return;
-                            }
-
-                            if (input.length > 0 || uploadedFiles.length > 0) {
-                              handleSendMessage?.(event);
-                            }
-                          }}
+                          disabled={isLoading || !input.trim()}
+                          hasSubscription={hasSubscription}
+                          isCheckingSubscription={isCheckingSubscription}
+                          onClick={handleSendMessage}
                         />
                       )}
                     </ClientOnly>
@@ -668,3 +831,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     return <Tooltip.Provider delayDuration={200}>{baseChat}</Tooltip.Provider>;
   },
 );
+
+function setShowAuthDialog(arg0: boolean) {
+  throw new Error('Function not implemented.');
+}
